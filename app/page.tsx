@@ -1,5 +1,5 @@
-import { DesignSystemOverview } from "@/components/design-system/design-system-overview";
+import { CalculatorFlow } from "@/components/calculator/calculator-flow";
 
 export default function Home() {
-  return <DesignSystemOverview />;
+  return <CalculatorFlow />;
 }

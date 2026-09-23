@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { designTokenCssVariables } from "@/lib/design-system/tokens";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -17,7 +18,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "NBA Legal Fees Practitioner",
   description:
-    "The Nigerian Bar Association design system for statutory legal fee computation, compliant remittance, and practitioner administration.",
+    "Calculate prescribed minimum legal fees under the Legal Practitioners Remuneration Order, 2023.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col" style={designTokenCssVariables}>{children}</body>
     </html>
   );
 }
