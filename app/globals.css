@@ -1,11 +1,42 @@
 @import "tailwindcss";
 
+/* Tailwind names resolve through the same variables exported from designTokens. */
+@theme inline {
+  --color-nba-primary: var(--color-primary);
+  --color-nba-primary-container: var(--color-primary-container);
+  --color-nba-primary-strong: var(--color-primary-strong);
+  --color-nba-secondary-container: var(--color-secondary-container);
+  --color-nba-surface: var(--color-surface);
+  --color-nba-surface-container: var(--color-surface-container);
+  --color-nba-surface-muted: var(--color-surface-muted);
+  --color-nba-ink: var(--color-ink);
+  --color-nba-ink-muted: var(--color-ink-muted);
+  --color-nba-ink-subtle: var(--color-ink-subtle);
+  --color-nba-border: var(--color-border);
+  --color-nba-destructive: var(--color-destructive);
+  --color-nba-focus: var(--color-focus);
+  --spacing-nba-micro: var(--space-micro);
+  --spacing-nba-xs: var(--space-xs);
+  --spacing-nba-sm: var(--space-sm);
+  --spacing-nba-md: var(--space-md);
+  --spacing-nba-lg: var(--space-lg);
+  --spacing-nba-xl: var(--space-xl);
+  --spacing-nba-xxl: var(--space-xxl);
+  --radius-nba-small: var(--radius-small);
+  --radius-nba-medium: var(--radius-medium);
+  --radius-nba-large: var(--radius-large);
+  --radius-nba-pill: var(--radius-pill);
+  --shadow-nba-sm: var(--shadow-sm);
+  --shadow-nba-md: var(--shadow-md);
+  --shadow-nba-lg: var(--shadow-lg);
+}
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: #f8fbfa; color: #17211e; font-family: var(--font-geist-sans), Arial, sans-serif; }
-button, input, select { font: inherit; }
+button, input, select { font-family: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
-a { color: inherit; text-decoration: none; }
+@layer base { a { color: inherit; text-decoration: none; } }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 ::selection { background: #ccf8da; color: #003d20; }
@@ -80,6 +111,7 @@ button:disabled { cursor: not-allowed; }
 .architecture-art__palm--right { right: 5%; transform: scale(.75) rotate(8deg); }
 .architecture-art__caption { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; padding: 0 10px; display: flex; align-items: center; gap: 6px; background: linear-gradient(90deg, rgba(19,30,27,.94), rgba(19,30,27,.72)); color: white; font-size: 9px; font-weight: 600; }
 
+@layer components {
 .button { min-height: 40px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; border-radius: var(--radius-small); font-size: 12px; font-weight: 650; line-height: 1.1; transition: background .15s, border-color .15s, box-shadow .15s, transform .15s; }
 .button:hover:not(:disabled) { transform: translateY(-1px); }
 .button:focus-visible, .token-swatch:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid rgba(29,140,87,.26); outline-offset: 2px; }
@@ -95,6 +127,7 @@ button:disabled { cursor: not-allowed; }
 .button--full { width: 100%; }
 .button:disabled { color: #73817c; border-color: transparent; background: #edf3f0; box-shadow: none; opacity: .85; }
 .button__spinner { width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .badge { width: max-content; min-height: 22px; padding: 3px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: var(--radius-small); font-size: 10px; font-weight: 600; line-height: 1; white-space: nowrap; }
@@ -106,9 +139,11 @@ button:disabled { cursor: not-allowed; }
 .badge--danger { color: #8f1717; background: var(--color-destructive-container); }
 .badge--neutral { color: #42504b; background: #edf3f0; }
 
+@layer components {
 .card { border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: rgba(255,255,255,.92); }
 .card--padding-none { padding: 0; }.card--padding-compact { padding: 14px; }.card--padding-normal { padding: 18px; }
 .card--sm { box-shadow: var(--shadow-sm); }.card--md { box-shadow: var(--shadow-md); }.card--lg { box-shadow: var(--shadow-lg); }
+}
 .metric-grid { margin: 12px 0 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; scroll-margin-top: 78px; }
 .metric-card > span { display: block; margin-bottom: 9px; color: var(--color-ink-muted); font-size: 10px; }
 .metric-card > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
