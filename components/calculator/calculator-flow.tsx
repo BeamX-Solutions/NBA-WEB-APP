@@ -110,7 +110,6 @@ export function CalculatorFlow() {
   const [showPreview, setShowDemo] = useState(false);
   const [error, setError] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [navMessage, setNavMessage] = useState("");
   const documentTriggerRef = useRef<HTMLButtonElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -158,16 +157,10 @@ export function CalculatorFlow() {
   const amountError = Boolean(error && document && (!document.requiresPropertyTransfer || poaBasis === "property-transfer"));
   const amountLabel = document?.category === "mortgage" ? "Mortgage value (₦)" : document?.category === "tenancy" ? "Annual rental value (₦)" : document?.requiresPropertyTransfer || document && ["deed-of-gift", "deed-of-surrender", "deed-of-exchange"].includes(document.id) ? "Property value (₦)" : document ? "Consideration / purchase price (₦)" : "Amount (₦)";
 
-  useEffect(() => {
-    if (!navMessage) return;
-    const timer = window.setTimeout(() => setNavMessage(""), 3000);
-    return () => window.clearTimeout(timer);
-  }, [navMessage]);
-
   return <div className="min-h-screen bg-[#fcfcfd] font-[Arial,Helvetica,sans-serif] text-[#24272a]">
     <header className="flex h-[118px] items-center justify-between border-b border-[#e9e9e9] bg-white px-6 pt-[70px] pb-4 min-[800px]:h-[88px] min-[800px]:px-[max(32px,calc((100vw-1080px)/2))] min-[800px]:py-4">
       <Link aria-label="NBA Legal Fees home" className={focusClass} href="/"><Image alt="NBA Anaocha Branch" className="size-[35px] object-contain" height={35} src="/nba-seal.png" width={35}/></Link>
-      <button aria-label="Profile unavailable" className={`grid size-10 place-items-center rounded-full border-0 bg-[#f8f9f9] text-[#66717e] ${focusClass}`} onClick={() => setNavMessage("Profile is not available yet.")} type="button"><PersonIcon/></button>
+      <Link aria-label="Profile" className={`grid size-10 place-items-center rounded-full border-0 bg-[#f8f9f9] text-[#66717e] ${focusClass}`} href="/profile"><PersonIcon/></Link>
     </header>
     {showPreview && document && result && calculatedAmountKobo !== null ? <PreviewFlow basis={{ document, amountKobo: calculatedAmountKobo, fee: result }} onBack={() => setShowDemo(false)}/> : <main className="mx-auto max-w-[1080px] px-4 pt-[18px] pb-[calc(110px+env(safe-area-inset-bottom))] max-[375px]:px-3 min-[800px]:px-7 min-[800px]:pt-[30px] min-[800px]:pb-[115px]">
       <div className="mb-[18px] min-[800px]:mb-6"><p className="mb-[3px] text-sm leading-normal text-[#636c78]">Good evening,</p><h1 className="font-serif text-[26px] leading-[1.22] min-[800px]:text-[33px]">{PRACTITIONER_NAME}</h1></div>
@@ -188,9 +181,8 @@ export function CalculatorFlow() {
       <Link aria-current="page" className={`${navItemClass} ${focusClass} bg-[#fac542] text-nba-primary`} href="/"><CalculatorIcon/><span>Calculator</span></Link>
       <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/transactions"><ReceiptIcon size={22}/><span>Transactions</span></Link>
       <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/certificates"><CertificateIcon/><span>Certificates</span></Link>
-      <button className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} onClick={() => setNavMessage("Profile is not available yet.")} type="button"><PersonIcon/><span>Profile</span></button>
+      <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/profile"><PersonIcon/><span>Profile</span></Link>
     </nav> : null}
-    <div aria-live="polite" className={`pointer-events-none fixed right-4 bottom-[105px] left-4 z-25 mx-auto max-w-[400px] rounded-nba-medium bg-[#17392b] px-[15px] py-[10px] text-center text-[13px] text-white transition-[opacity,transform] duration-200 motion-reduce:transition-none ${navMessage ? "translate-y-0 opacity-100" : "translate-y-[10px] opacity-0"}`} role="status">{navMessage}</div>
     {pickerOpen ? <DocumentPicker onClose={() => setPickerOpen(false)} onSelect={selectDocument} selectedId={document?.id ?? ""}/> : null}
   </div>;
 }
