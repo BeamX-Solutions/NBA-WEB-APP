@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { AuthField, AuthSeal, AuthStatus, AuthSwitchLink } from "./auth-ui";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 function VisibilityIcon({ visible }: { visible: boolean }) {
   return (
@@ -14,15 +16,31 @@ function VisibilityIcon({ visible }: { visible: boolean }) {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ initialError = "" }: { initialError?: string }) {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialError);
+  const [pending, setPending] = useState(false);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPassword("");
-    setMessage("Log in is unavailable until Supabase authentication is configured. No session was created.");
+    setMessage("");
+    setPending(true);
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "").trim().toLowerCase();
+    try {
+      const { error } = await createClient().auth.signInWithPassword({ email, password });
+      if (error) { setMessage(error.message); return; }
+      setPassword("");
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.replace(next && /^\/(?!\/)[a-zA-Z0-9/_-]*$/.test(next) ? next : "/");
+      router.refresh();
+    } catch {
+      setMessage("Log in could not be completed. Please try again.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -51,8 +69,7 @@ export function LoginForm() {
                 </button>
               </div>
             </div>
-            <label className="auth-remember"><input name="remember" type="checkbox" /><span>Remember Me</span></label>
-            <button className="auth-submit" type="submit">Log In</button>
+            <button className="auth-submit" disabled={pending} type="submit">{pending ? "Logging in…" : "Log In"}</button>
             {message ? <AuthStatus>{message}</AuthStatus> : null}
           </form>
 
