@@ -186,7 +186,7 @@ export function CalculatorFlow() {
     </main>}
     {!showPreview ? <nav aria-label="Practitioner navigation" className="fixed right-0 bottom-0 left-0 z-20 grid h-[calc(70px+env(safe-area-inset-bottom))] grid-cols-4 gap-[4px] border-t border-[#eef0ef] bg-white p-[6px] pb-[calc(6px+env(safe-area-inset-bottom))] min-[800px]:mx-auto min-[800px]:h-[72px] min-[800px]:w-[430px] min-[800px]:rounded-t-nba-large min-[800px]:border min-[800px]:border-[#e1e5e3] min-[800px]:shadow-[0_-3px_20px_rgba(0,0,0,.05)]">
       <Link aria-current="page" className={`${navItemClass} ${focusClass} bg-[#fac542] text-nba-primary`} href="/"><CalculatorIcon/><span>Calculator</span></Link>
-      <button className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} onClick={() => setNavMessage("Transactions are not available yet.")} type="button"><ReceiptIcon size={22}/><span>Transactions</span></button>
+      <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/transactions"><ReceiptIcon size={22}/><span>Transactions</span></Link>
       <button className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} onClick={() => setNavMessage("Certificates are not available yet.")} type="button"><CertificateIcon/><span>Certificates</span></button>
       <button className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} onClick={() => setNavMessage("Profile is not available yet.")} type="button"><PersonIcon/><span>Profile</span></button>
     </nav> : null}
