@@ -106,7 +106,9 @@ export async function createInvoicePdf(invoice: PreviewInvoice): Promise<Blob> {
   return blob(ctx.pdf);
 }
 
-export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "amountKobo" | "fee">, client: string, matter: string): Promise<Blob> {
+export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "amountKobo" | "fee">, client: string, matter: string, practitioner?: { name: string; scn: string | null; branch: string | null }): Promise<Blob> {
+  const practitionerName = practitioner?.name ?? PRACTITIONER_NAME;
+  const practitionerScn = practitioner ? practitioner.scn ?? "Not available" : PRACTITIONER_SCN;
   const ctx = await context();
   let page = ctx.pdf.addPage([W, H]);
   let y = 808;
@@ -127,15 +129,15 @@ export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "a
   write(page, ctx, "TO", M, y, 8, ctx.fonts.sans, muted); y -= 16;
   y = paragraph(page, ctx, client.trim(), M, y, width, 10, 15, ctx.fonts.bold) - 15;
   y = field(page, ctx, "Instructions accepted", date(new Date()), y);
-  y = field(page, ctx, "Legal practitioner", PRACTITIONER_NAME, y);
-  y = field(page, ctx, "Supreme Court number", PRACTITIONER_SCN, y) - 22;
+  y = field(page, ctx, "Legal practitioner", practitionerName, y);
+  y = field(page, ctx, "Supreme Court number", practitionerScn, y) - 22;
   const basisName = basis.document.category === "tenancy" ? "annual rental value" : basis.document.category === "mortgage" ? "mortgage value" : "property value or consideration";
   section("The instruction", "You have instructed me in connection with " + matter.trim() + ". The work is the preparation of a " + basis.document.label + ", assessed under " + basis.document.description.split(" - ")[0] + " of the Legal Practitioners (Remuneration) Order, 2023.");
   section("Basis of charge", "The fee is calculated on the " + basisName + " of " + formatNaira(basis.amountKobo) + ". The relevant bands in the Order are applied to that value.");
   section("The fee", formatNaira(basis.fee.primaryFeeKobo) + " is the prescribed minimum professional fee. The calculation comprises " + basis.fee.lines.map((item) => item.label + ": " + formatNaira(item.amountKobo)).join("; ") + ". VAT and disbursements are separate.");
   section("The other party", "Where the other party's practitioner reviews the draft instrument under the applicable Scale 4 rule, the indicated half-rate is " + formatNaira(basis.fee.counterpartyFeeKobo) + ". This is not payable to me and is shown only for context.");
   if (ctx.pdf.getPageCount() === 1) { page = ctx.pdf.addPage([W, H]); y = 790; }
-  section("Branch fee and registration", "The local preview shows " + formatNaira(basis.fee.branchLevyKobo) + " as a branch amount. The branch must confirm any amount and issue payment details before a transfer. This document creates no payment reference or transaction.");
+  section("Branch fee and registration", (practitioner?.branch ? practitioner.branch + " must confirm " : "The branch must confirm ") + formatNaira(basis.fee.branchLevyKobo) + " as the branch amount and issue payment details before a transfer. This document creates no payment reference or transaction.");
   section("What is not included", "Value Added Tax and disbursements are excluded, including stamp duty, registration fees, search fees and the cost of Governor's Consent where required.");
   section("Verification", "If a transaction is later created, paid and verified by the branch, the branch may issue a Certificate of Compliance carrying a unique verifiable reference.");
   ensure(130);
@@ -143,8 +145,8 @@ export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "a
   y = paragraph(page, ctx, "The Order requires written terms of engagement to reach the client within fourteen days of accepting instructions. This is a locally generated draft for practitioner review before delivery.", M + 15, y - 10, width - 20, 8.7, 13) - 25;
   ensure(85);
   page.drawLine({ start: { x: M, y }, end: { x: M + 185, y }, thickness: 0.7, color: color(ctx, dark) });
-  y -= 16; write(page, ctx, PRACTITIONER_NAME, M, y, 9);
-  y -= 14; write(page, ctx, "Legal Practitioner · " + PRACTITIONER_SCN, M, y, 8.5, ctx.fonts.sans, muted);
+  y -= 16; write(page, ctx, practitionerName, M, y, 9);
+  y -= 14; write(page, ctx, "Legal Practitioner · " + practitionerScn, M, y, 8.5, ctx.fonts.sans, muted);
   y -= 26; paragraph(page, ctx, "Prepared with NBA Legal Fees for practitioner review. Figures are exclusive of VAT and disbursements.", M, y, width, 7.5, 11, ctx.fonts.sans, muted);
   return blob(ctx.pdf);
 }

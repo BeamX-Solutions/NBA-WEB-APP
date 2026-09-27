@@ -1,221 +1,377 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useActionState,
+  useState,
+  useRef,
+} from "react";
+
+import { createInvoiceAction } from "@/app/calculator-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatNaira, type DocumentType, type FeeBreakdown } from "@/lib/fees/legal-fees";
+import { FormNotice } from "@/components/ui/form-notice";
+import type {
+  CalculatorContext,
+  CreateInvoiceActionState,
+} from "@/lib/calculator/types";
 import {
-  createInvoicePdf,
   createTermsPdf,
-  BRANCH_NAME,
-  PRACTITIONER_NAME,
-  PREVIEW_REFERENCE,
-  PRACTITIONER_SCN,
   downloadPdf,
-  validateProof,
   validateText,
-  type PreviewInvoice,
 } from "@/lib/preview/documents";
+import {
+  formatNaira,
+  type DocumentType,
+  type FeeBreakdown,
+} from "@/lib/fees/legal-fees";
 
-type Basis = { document: DocumentType; amountKobo: bigint; fee: FeeBreakdown };
-type Stage = "review" | "invoice" | "proof" | "pending";
+type PowerOfAttorneyBasis = "property-transfer" | "other" | "";
+type Calculation = {
+  amountKobo: bigint;
+  document: DocumentType;
+  fee: FeeBreakdown;
+};
 
-const greenButton = "min-h-[51px] rounded-[9px] bg-nba-primary text-[15px] font-semibold shadow-none hover:bg-nba-primary-container";
-const outlineButton = "min-h-[51px] rounded-[9px] border-[1.5px] border-nba-primary bg-white text-nba-primary text-[15px] font-semibold shadow-none";
-const labelClass = "mb-[9px] block text-[13px] font-bold text-[#25292c]";
-const inputClass = "min-h-[52px] w-full rounded-[9px] border border-[#cdd3d1] bg-white px-[13px] py-3 text-base text-[#25292c] outline-none placeholder:text-[#9099a5] focus:border-[#8c969b] focus:ring-2 focus:ring-[#dce1e0]";
+const greenButton =
+  "reference-primary inline-flex items-center justify-center min-h-[51px] w-full rounded-[9px] bg-[#0b5933] px-4 text-[15px] font-semibold text-white shadow-none hover:bg-[#084829] focus-visible:outline-2 focus-visible:outline-nba-focus focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const outlineButton =
+  "reference-outline inline-flex items-center justify-center min-h-[53px] w-full rounded-[9px] border-[1.5px] border-[#0b5933] bg-white px-4 text-[15px] font-semibold text-[#0b5933] shadow-none hover:bg-[#f1f4f1] focus-visible:outline-2 focus-visible:outline-nba-focus focus-visible:outline-offset-2";
+const labelClass = "mb-[10px] block text-[13px] font-bold text-[#202220]";
+const inputClass =
+  "min-h-[64px] w-full resize-y rounded-[9px] border border-[#cdd1cd] bg-white px-3 py-3 text-base text-[#202220] outline-none placeholder:text-[#9a9fa7] focus:border-[#8c969b] focus:ring-2 focus:ring-[#8c969b]/20";
+const referenceCard = "reference-card rounded-[13px] border-[#e0e3e0] bg-white p-4 shadow-none";
 
-function SectionTitle({ children, icon }: { children: React.ReactNode; icon?: string }) {
-  return <h2 className="mb-5 flex items-center gap-[10px] font-serif text-[20px] font-bold leading-[1.2] text-nba-primary"><span aria-hidden="true" className="font-sans text-[21px]">{icon}</span>{children}</h2>;
+const initialInvoiceState: CreateInvoiceActionState = {
+  fieldErrors: {},
+  message: "",
+  status: "idle",
+  transaction: null,
+};
+
+function SectionTitle({ children, icon }: { children: ReactNode; icon?: "terms" | "fee" | "parties" | "bank" }) {
+  return (
+    <h2 className="mb-4 flex items-center gap-[9px] font-serif text-[17px] font-bold text-[#21613c]">
+      {icon ? <svg aria-hidden="true" className="size-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+        {icon === "terms" ? <path d="m2 9 10-7 10 7v12H2V9Zm2 0 8 5 8-5-8-5-8 5Z"/> : icon === "bank" ? <path d="m12 2 10 5v2H2V7l10-5ZM4 11h3v8H4v-8Zm6 0h4v8h-4v-8Zm7 0h3v8h-3v-8ZM2 20h20v2H2v-2Z"/> : icon === "parties" ? <><circle cx="12" cy="6" r="4"/><circle cx="3" cy="9" r="2.5"/><circle cx="21" cy="9" r="2.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3H5ZM0 20v-4a4 4 0 0 1 4-4l2 1-3 7H0Zm21 0-3-7 2-1a4 4 0 0 1 4 4v4h-3Z"/></> : <><rect height="20" rx="2" width="20" x="2" y="2"/><path d="M6 7h5m-2.5 7v5M6 16.5h5m4-3h4m-4 4h4m-4-8 4-4m-4 0 4 4" stroke="white" strokeWidth="1.5"/></>}
+      </svg> : null}
+      {children}
+    </h2>
+  );
 }
 
-function DataRow({ label, value, strong = false, onCopy }: { label: string; value: string; strong?: boolean; onCopy?: () => void }) {
-  return <div className="flex min-h-[64px] items-center justify-between gap-3 border-b border-[#e9ebeb] py-[13px] last:border-b-0">
-    <div className="min-w-0"><p className="mb-[5px] text-[12px] tracking-[.06em] text-[#6a7382]">{label.toUpperCase()}</p><p className={`wrap-break-word text-[16px] text-[#25292c] ${strong ? "font-bold" : ""}`}>{value}</p></div>
-    {onCopy ? <button aria-label={`Copy ${label}`} className="grid size-10 shrink-0 place-items-center rounded-full border-0 bg-[#f1f3f3] text-[#697381] focus-visible:outline-2 focus-visible:outline-nba-focus" onClick={onCopy} type="button"><svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20"><rect height="14" rx="1" stroke="currentColor" strokeWidth="2" width="12" x="8" y="7"/><path d="M5 17H4V4h13v1" stroke="currentColor" strokeWidth="2"/></svg></button> : null}
-  </div>;
+function DataRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 border-b border-[#eceeee] py-[9px]">
+      <dt className="text-xs uppercase tracking-[.04em] text-[#6c727c]">{label}</dt>
+      <dd className="m-0 wrap-break-word text-[15px] leading-[1.4] text-[#202220]">
+        {value}
+      </dd>
+    </div>
+  );
 }
 
-function ConfirmationDialog({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: () => void }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog?.showModal();
-    dialog?.querySelector<HTMLButtonElement>("[data-autofocus]")?.focus();
-    return () => { dialog?.close(); previousFocus?.focus(); };
-  }, []);
-
-  return <dialog aria-labelledby="proof-confirm-title" className="fixed m-auto w-[min(420px,calc(100%-48px))] rounded-[14px] border-0 bg-white p-6 text-center shadow-xl backdrop:bg-[rgba(20,34,31,.46)]" onCancel={onCancel} ref={dialogRef}>
-    <span aria-hidden="true" className="mx-auto mb-4 grid size-[85px] place-items-center rounded-full bg-[#e8f8ef] text-[38px] text-nba-primary">?</span>
-    <h2 className="mb-3 font-serif text-[24px]" id="proof-confirm-title">Submit for verification?</h2>
-    <p className="mb-5 text-[15px] leading-[1.45] text-[#66717e]">Your branch will review this proof of payment. You will not be able to change the transaction or replace the file while it is under review. In this local preview, no file is sent.</p>
-    <Button className={greenButton} data-autofocus fullWidth onClick={onSubmit}>Submit</Button>
-    <button className="mt-3 min-h-10 w-full border-0 bg-transparent font-semibold text-[#66717e]" onClick={onCancel} type="button">Keep editing</button>
-  </dialog>;
-}
-
-export function TermsCard({ basis }: { basis: Basis }) {
-  const [client, setClient] = useState("");
-  const [matter, setMatter] = useState("");
-  const [errors, setErrors] = useState<{ client?: string; matter?: string }>({});
-  const [working, setWorking] = useState(false);
+export function TermsCard({ calculation, context }: { calculation: Calculation; context: CalculatorContext }) {
+  const [clientName, setClientName] = useState("");
+  const [matterDescription, setMatterDescription] = useState("");
+  const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [working, setWorking] = useState(false);
 
-  async function generate() {
-    const clientError = validateText(client, "Client");
-    const matterError = validateText(matter, "The matter");
-    setErrors({ client: clientError ?? undefined, matter: matterError ?? undefined });
-    if (clientError || matterError) return;
-    setWorking(true);
+  const handleDownload = async () => {
+    const clientError = validateText(clientName, "Client name");
+    const matterError = validateText(matterDescription, "Matter description");
+
+    if (clientError || matterError) {
+      setError(clientError ?? matterError ?? "Review the document details.");
+      return;
+    }
+
+    setError("");
     setMessage("");
+    setWorking(true);
     try {
-      downloadPdf(await createTermsPdf(basis, client, matter), "terms-of-engagement.pdf");
+      const pdf = await createTermsPdf(
+        calculation,
+        clientName.trim(),
+        matterDescription.trim(),
+        { name: context.displayName, scn: context.scn, branch: context.branch?.name ?? null },
+      );
+      downloadPdf(
+        pdf,
+        `terms-of-engagement-${clientName.trim().replaceAll(/\s+/g, "-").toLowerCase()}.pdf`,
+      );
       setMessage("Terms of engagement PDF downloaded.");
     } catch {
-      setMessage("Could not generate the draft PDF. Please try again.");
+      setError("The terms document could not be generated. Please try again.");
     } finally {
       setWorking(false);
     }
-  }
+  };
 
-  return <Card as="section" className="mt-4 rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-    <SectionTitle icon="✉">Terms of Engagement</SectionTitle>
-    <p className="mb-[17px] text-[13px] leading-[1.5] text-[#66717e]">The Legal Practitioners (Remuneration) Order, 2023 requires written terms to reach your client within 14 days of accepting instructions. This produces a draft from the calculation above.</p>
-    <div className="mb-[17px]"><label className={labelClass} htmlFor="terms-client">Client</label><input aria-invalid={Boolean(errors.client)} className={inputClass} id="terms-client" maxLength={160} onChange={(event) => { setClient(event.target.value); setErrors((old) => ({ ...old, client: undefined })); }} placeholder="Name of the client instructing you" value={client}/>{errors.client ? <p className="mt-1 text-xs text-nba-destructive">{errors.client}</p> : null}</div>
-    <div className="mb-[17px]"><label className={labelClass} htmlFor="terms-matter">The matter</label><input aria-invalid={Boolean(errors.matter)} className={inputClass} id="terms-matter" maxLength={160} onChange={(event) => { setMatter(event.target.value); setErrors((old) => ({ ...old, matter: undefined })); }} placeholder="e.g. the sale of the property at 12 Ziks Avenue" value={matter}/>{errors.matter ? <p className="mt-1 text-xs text-nba-destructive">{errors.matter}</p> : null}</div>
-    <Button className={outlineButton} fullWidth loading={working} onClick={generate}>Generate Terms of Engagement</Button>
-    <p aria-live="polite" className="mt-2 min-h-4 text-center text-xs text-[#66717e]">{message}</p>
-  </Card>;
+  return (
+    <Card className={`${referenceCard} space-y-4`} padding="none">
+      <div className="space-y-1">
+        <SectionTitle icon="terms">Terms of Engagement</SectionTitle>
+        <p className="text-xs leading-[1.5] text-[#6c727c]">
+          The Legal Practitioners (Remuneration) Order, 2023 requires written terms to reach your client within 14 days of accepting instructions. This produces them from the calculation above.
+        </p>
+      </div>
+
+      {error ? <FormNotice tone="error">{error}</FormNotice> : null}
+
+      <div className="grid gap-[18px]">
+        <label className="block">
+          <span className={labelClass}>Client</span>
+          <input
+            className={inputClass.replace("min-h-[64px]", "min-h-[50px]")}
+            maxLength={160}
+            onChange={(event) => setClientName(event.target.value)}
+            placeholder="Name of the client instructing you"
+            value={clientName}
+          />
+        </label>
+
+        <label className="block">
+          <span className={labelClass}>The matter</span>
+          <input
+            className={inputClass.replace("min-h-[64px]", "min-h-[50px]")}
+            maxLength={160}
+            onChange={(event) => setMatterDescription(event.target.value)}
+            placeholder="e.g. the sale of the property at 12 Ziks Avenue"
+            value={matterDescription}
+          />
+        </label>
+      </div>
+
+      <Button
+        className={outlineButton}
+        loading={working}
+        onClick={handleDownload}
+        type="button"
+      >
+        Generate Terms of Engagement
+      </Button>
+      <p aria-live="polite" className="text-xs text-[#6c727c] empty:hidden">
+        {message}
+      </p>
+    </Card>
+  );
 }
 
-export function PreviewFlow({ basis, onBack }: { basis: Basis; onBack: () => void }) {
-  const [stage, setStage] = useState<Stage>("review");
+function inputAmount(amountKobo: bigint) {
+  return formatNaira(amountKobo, true).slice(1).replaceAll(",", "");
+}
+
+function invoiceBlockReason(context: CalculatorContext) {
+  if (context.loadWarning) {
+    return context.loadWarning;
+  }
+
+  if (!context.branch) {
+    return "Your profile is not linked to a branch. Contact support before creating an invoice.";
+  }
+
+  if (context.branch.activationStatus !== "active") {
+    return "Your branch is not active for invoice creation. You can still use the calculator.";
+  }
+
+  if (!context.subscription?.isCurrent) {
+    return "An active subscription is required to create an invoice. You can still use the calculator.";
+  }
+
+  return null;
+}
+
+export function InvoiceFlow({
+  calculation,
+  context,
+  onBack,
+  poaBasis,
+}: {
+  calculation: Calculation;
+  context: CalculatorContext;
+  onBack: () => void;
+  poaBasis: PowerOfAttorneyBasis;
+}) {
+  const submittingRef = useRef(false);
+  const [state, formAction, pending] = useActionState(
+    async (previous: CreateInvoiceActionState, data: FormData) => {
+      try { return await createInvoiceAction(previous, data); }
+      catch { return { fieldErrors: {}, message: "The invoice response was interrupted. Check Transactions before creating another invoice.", requiresReview: true, status: "error" as const, transaction: null }; }
+      finally { submittingRef.current = false; }
+    },
+    initialInvoiceState,
+  );
   const [parties, setParties] = useState("");
-  const [partiesError, setPartiesError] = useState("");
-  const [invoice, setInvoice] = useState<PreviewInvoice | null>(null);
-  const [proof, setProof] = useState<File | null>(null);
-  const [proofError, setProofError] = useState("");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [working, setWorking] = useState(false);
-  const [message, setMessage] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [localError, setLocalError] = useState("");
+  const blockReason = invoiceBlockReason(context);
+  const branch = context.branch;
+  const { amountKobo, document, fee } = calculation;
 
-  function continueToInvoice() {
-    const error = validateText(parties, "Parties to the Document");
-    if (error) { setPartiesError(error); return; }
-    setInvoice({ ...basis, parties: parties.trim(), createdAt: new Date() });
-    setStage("invoice");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const partiesError = validateText(parties, "Parties or particulars");
 
-  async function exportInvoice(share: boolean) {
-    if (!invoice) return;
-    setWorking(true);
-    try {
-      const blob = await createInvoicePdf(invoice);
-      const filename = "branch-fee-invoice.pdf";
-      const file = new File([blob], filename, { type: "application/pdf" });
-      if (share && navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: "Branch fee invoice preview" });
-        setMessage("Invoice preview shared.");
-      } else {
-        downloadPdf(blob, filename);
-        setMessage(share ? "Sharing is unavailable here. Invoice PDF downloaded instead." : "Invoice PDF downloaded.");
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") setMessage("Sharing cancelled.");
-      else setMessage("Could not prepare the PDF. Please try again.");
-    } finally {
-      setWorking(false);
+    if (pending || submittingRef.current || state.requiresReview) { event.preventDefault(); return; }
+    if (blockReason || partiesError) {
+      event.preventDefault();
+      setLocalError(partiesError || blockReason || "Unable to create invoice.");
+      return;
     }
+
+    submittingRef.current = true;
+    setLocalError("");
+  };
+
+  if (state.status === "success" && state.transaction) {
+    const hasBankDetails = Boolean(
+      branch?.accountName && branch.accountNumber && branch.bankName,
+    );
+
+    return (
+      <div className="space-y-4">
+        <div className="mb-5">
+          <h1 className="font-serif text-[26px] leading-[1.2] font-bold">Branch Fee Invoice</h1>
+          <p className="mt-2 text-[15px] leading-[1.45] text-[#6c727c]">Pay this amount to your branch, then upload the payment slip.</p>
+        </div>
+        <FormNotice tone="success">
+          The invoice was created successfully. Payment verification happens
+          after proof is submitted from the transaction page.
+        </FormNotice>
+        <Card className={referenceCard} padding="none">
+          <div className="mb-2 flex items-center gap-3 border-b border-[#e0e3e0] pb-3">
+            <Image alt="NBA" height={44} src="/nba-seal.png" width={44}/>
+            <div><h2 className="text-[15px] font-bold text-[#21613c]">{branch?.name ?? "NBA Legal Fees"}</h2><p className="mt-1 text-xs text-[#6c727c]">NBA Legal Fees</p></div>
+          </div>
+          <dl>
+            <DataRow label="Legal practitioner" value={context.displayName}/>
+            <DataRow label="Reference" value={state.transaction.invoiceNumber}/>
+            <DataRow label="Document type" value={document.label}/>
+            <DataRow label="Parties" value={parties.trim()}/>
+            <DataRow label="Consideration" value={formatNaira(amountKobo)}/>
+            <DataRow label="Total payable" value={state.transaction.amountPayable ?? "Unavailable — check your transaction before paying"}/>
+          </dl>
+        </Card>
+        {hasBankDetails && branch ? (
+          <Card className={referenceCard} padding="none">
+            <SectionTitle icon="bank">Pay into this account</SectionTitle>
+            <dl className="border-t border-[#e0e3e0]">
+              <DataRow label="Account name" value={branch.accountName ?? ""}/>
+              <DataRow label="Account number" value={branch.accountNumber ?? ""}/>
+              <DataRow label="Bank" value={branch.bankName ?? ""}/>
+              <DataRow label="Use this reference" value={state.transaction.invoiceNumber}/>
+            </dl>
+            <p className="mt-3 rounded-[9px] bg-[#fff5d3] p-3 text-xs leading-[1.5] text-[#86601a]">Quote the reference on your transfer. Without it your branch may not be able to match the payment to this transaction.</p>
+          </Card>
+        ) : (
+          <FormNotice tone="info">
+            Bank details are not available for your branch. Contact your
+            branch before making a payment.
+          </FormNotice>
+        )}
+        <Link className={greenButton} href={`/transactions/${state.transaction.id}`}>View transaction</Link>
+        <button className={outlineButton} onClick={onBack} type="button">Back to calculator</button>
+        <TermsCard calculation={calculation} context={context}/>
+      </div>
+    );
   }
 
-  function chooseProof(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const error = validateProof(file);
-    if (error) { setProof(null); setProofError(error); event.target.value = ""; return; }
-    setProof(file);
-    setProofError("");
-  }
+  return (
+    <div className="space-y-4">
+        <div className="mb-5 space-y-2">
 
-  const valueLabel = basis.document.category === "tenancy" ? "Annual rental value" : basis.document.category === "mortgage" ? "Mortgage value" : "Consideration / purchase price";
-  const title = stage === "review" ? "Generate Invoice" : stage === "invoice" ? "Branch Fee Invoice" : stage === "proof" ? "Upload Proof" : "Submission preview complete";
-  const description = stage === "review" ? "Confirm the figures and name the parties. A payment reference becomes available after issuance." : stage === "invoice" ? "This local invoice preview is not payable. Branch payment details become available after issuance." : stage === "proof" ? "Submit payment evidence for verification to proceed with document stamping. In this preview, the file stays on this device." : "Your selected file remained on this device. No branch review has started.";
+          <h1 className="font-serif text-[26px] leading-[1.2] font-bold text-[#202220]">
+            Generate Invoice
+          </h1>
+          <p className="text-[15px] leading-[1.45] text-[#6c727c]">
+            Confirm the figures and name the parties. This creates the reference you quote when paying your branch.
+          </p>
+        </div>
 
-  return <main className="mx-auto max-w-[800px] px-4 pt-[22px] pb-[70px] max-[375px]:px-3 min-[800px]:pt-[30px]">
-    <button className="mb-3 border-0 bg-transparent p-0 text-xs font-semibold text-nba-primary underline" onClick={() => { if (stage === "review") onBack(); else if (stage === "invoice") setStage("review"); else if (stage === "proof") setStage("invoice"); else setStage("proof"); }} type="button">← Back</button>
-    <h1 className="font-serif text-[28px] leading-[1.15] text-[#202326]">{title}</h1>
-    <p className="mt-[7px] mb-5 text-[16px] leading-[1.45] text-[#66717e]">{description}</p>
+        <Card className={referenceCard} padding="none">
+        <SectionTitle icon="fee">Calculated fee</SectionTitle>
+        <dl>
+          <DataRow label="Document type" value={document.label} />
+          <DataRow label="Consideration / purchase price" value={formatNaira(amountKobo)} />
+          <DataRow
+            label="Professional fee"
+            value={formatNaira(fee.primaryFeeKobo)}
+          />
+          <DataRow label="Payable to your branch" value={formatNaira(fee.branchLevyKobo)} />
+        </dl>
+        </Card>
 
-    {stage === "review" ? <>
-      <Card as="section" className="mb-4 rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-        <SectionTitle icon="▣">Calculated fee</SectionTitle>
-        <DataRow label="Document type" value={basis.document.label}/>
-        <DataRow label={valueLabel} value={formatNaira(basis.amountKobo)}/>
-        <DataRow label="Professional fee" value={formatNaira(basis.fee.primaryFeeKobo)}/>
-        <DataRow label="Payable to your branch" strong value={formatNaira(basis.fee.branchLevyKobo)}/>
-      </Card>
-      <Card as="section" className="mb-4 rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-        <SectionTitle icon="♟">Parties</SectionTitle>
-        <label className={labelClass} htmlFor="invoice-parties">Parties to the Document</label>
-        <textarea aria-describedby="parties-help" aria-invalid={Boolean(partiesError)} className={`${inputClass} min-h-[65px] resize-y`} id="invoice-parties" maxLength={160} onChange={(event) => { setParties(event.target.value); setPartiesError(""); }} placeholder="e.g. Chinedu Okafor to Adeola Properties Ltd" value={parties}/>
-        <p className="mt-[5px] text-xs leading-[1.4] text-[#66717e]" id="parties-help">This appears on the invoice and on your Certificate of Compliance, so use the names as they appear on the instrument.</p>
-        {partiesError ? <p className="mt-1 text-xs text-nba-destructive">{partiesError}</p> : null}
-      </Card>
-      <Button className={greenButton} fullWidth onClick={continueToInvoice}>Generate Invoice</Button>
-      <p className="mt-3 text-center text-xs leading-[1.4] text-[#66717e]">Generating an invoice does not pay anything. Payment details become available after issuance.</p>
-    </> : null}
+        {blockReason ? <FormNotice tone="error">{blockReason}</FormNotice> : null}
+        {state.status === "error" && state.message ? (
+          <FormNotice tone="error">{state.message}</FormNotice>
+        ) : null}
+        {state.requiresReview ? <Link className="text-sm font-semibold text-nba-primary underline" href="/transactions">Check Transactions</Link> : null}
+        {localError ? <FormNotice tone="error">{localError}</FormNotice> : null}
 
-    {stage === "invoice" && invoice ? <>
-      <Card as="section" className="mb-4 rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-        <div className="mb-3 flex items-center gap-3 border-b border-[#e1e4e4] pb-3"><Image alt="" className="size-10 object-contain" height={40} src="/nba-seal.png" width={40}/><div><h2 className="text-[17px] font-bold text-nba-primary">{BRANCH_NAME}</h2><p className="text-sm text-[#66717e]">NBA Legal Fees</p></div></div>
-        <DataRow label="Legal practitioner" strong value={PRACTITIONER_NAME}/>
-        <DataRow label="Reference" strong value={PREVIEW_REFERENCE}/>
-        <DataRow label="Document type" value={invoice.document.label}/>
-        <DataRow label="Parties" value={invoice.parties}/>
-        <DataRow label={valueLabel} value={formatNaira(invoice.amountKobo)}/>
-        <DataRow label="Date" value={invoice.createdAt.toLocaleDateString("en-GB")}/>
-      </Card>
-      <Card as="section" className="mb-4 rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-        <SectionTitle icon="▥">Pay into this account</SectionTitle>
-        <DataRow label="Account name" strong value="Available after issuance"/>
-        <DataRow label="Account number" strong value="Available after issuance"/>
-        <DataRow label="Bank" strong value="Available after issuance"/>
-        <DataRow label="Use this reference" strong value={PREVIEW_REFERENCE}/>
-        <div className="mt-3 rounded-[9px] bg-[#fff4d9] p-3 text-[13px] leading-[1.4] text-[#785414]">No account or payment reference has been issued. Do not make a transfer against this preview.</div>
-      </Card>
-      <p className="mb-4 text-center text-[17px] font-bold text-nba-primary">Branch amount: {formatNaira(invoice.fee.branchLevyKobo)}</p>
-      <div className="grid gap-2"><Button className={greenButton} fullWidth onClick={() => { setStage("proof"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>View proof upload</Button><Button className={outlineButton} disabled={working} fullWidth onClick={() => exportInvoice(false)}>Download PDF</Button><Button className={outlineButton} disabled={working} fullWidth onClick={() => exportInvoice(true)}>Share invoice</Button></div>
-      <p aria-live="polite" className="mt-2 min-h-4 text-center text-xs text-[#66717e]">{message}</p>
-    </> : null}
+        <form action={formAction} className="space-y-5" onSubmit={handleSubmit}>
+          <input name="amount" type="hidden" value={inputAmount(amountKobo)} />
+          <input name="documentId" type="hidden" value={document.id} />
+          <input
+            name="poaBasis"
+            type="hidden"
+            value={document.requiresPropertyTransfer ? poaBasis : ""}
+          />
 
-    {stage === "proof" && invoice ? <>
-      <div className="mb-5 flex items-start justify-between gap-2 text-center text-xs"><div className="flex-1"><span className="mx-auto mb-1 grid size-8 place-items-center rounded-full bg-nba-primary text-white">✓</span><strong>Invoice</strong></div><div className="mt-4 h-[2px] flex-1 bg-nba-primary"/><div className="flex-1"><span className="mx-auto mb-1 grid size-8 place-items-center rounded-full bg-nba-primary text-white">2</span><strong>Proof of payment</strong></div><div className="mt-4 h-[2px] flex-1 bg-[#dce2e0]"/><div className="flex-1 text-[#66717e]"><span className="mx-auto mb-1 grid size-8 place-items-center rounded-full border border-[#dce2e0]">3</span><span>Verified</span></div></div>
-      <span className="mb-3 inline-block rounded-full bg-[#fff4d9] px-3 py-2 text-xs font-bold text-[#785414]">Awaiting Payment</span>
-      <Card as="section" className="mb-4 rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-        <SectionTitle>Transaction</SectionTitle>
-        <DataRow label="Name of practitioner" value={PRACTITIONER_NAME}/>
-        <DataRow label="Supreme Court number" value={`${PRACTITIONER_SCN}`}/>
-        <DataRow label="Parties to the document" value={invoice.parties}/>
-        <DataRow label="Type of document" value={invoice.document.label}/>
-        <DataRow label={valueLabel} value={formatNaira(invoice.amountKobo)}/>
-        <DataRow label="Amount payable" strong value={formatNaira(invoice.fee.branchLevyKobo)}/>
-      </Card>
-      <Card as="section" className="rounded-nba-large border-[#e0e2e2] bg-white p-4" padding="none">
-        <SectionTitle>Upload Proof of Payment</SectionTitle>
-        <input accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" id="proof-file" onChange={chooseProof} ref={fileRef} type="file"/>
-        <label className="grid min-h-[205px] cursor-pointer place-content-center justify-items-center rounded-[12px] border-2 border-dashed border-[#cdd4d1] bg-[#f8faf9] p-4 text-center" htmlFor="proof-file"><span aria-hidden="true" className="mb-3 grid size-[52px] place-items-center rounded-[11px] bg-[#ebeeee] text-[26px] text-[#697381]">⇧</span><strong className="mb-2 text-sm">Tap or click to browse files</strong><span className="mb-3 text-xs text-[#66717e]">Supported formats: PDF, JPG, PNG (max 10MB)</span><span className="rounded-[9px] border border-[#cdd4d1] bg-white px-4 py-2 text-sm font-semibold">Select File</span></label>
-        {proofError ? <p aria-live="polite" className="mt-2 text-xs text-nba-destructive">{proofError}</p> : null}
-        {proof ? <div className="mt-3 flex items-center justify-between gap-3 rounded-[9px] bg-[#f2f4f4] px-3 py-3 text-sm"><span className="min-w-0 truncate">{proof.name}</span><button className="shrink-0 border-0 bg-transparent font-semibold text-[#b43f29]" onClick={() => { setProof(null); if (fileRef.current) fileRef.current.value = ""; }} type="button">Remove</button></div> : null}
-        <Button className={`${greenButton} mt-4`} disabled={!proof} fullWidth onClick={() => setConfirmOpen(true)}>Submit for Verification</Button>
-      </Card>
-    </> : null}
+          <Card className={referenceCard} padding="none">
+          <SectionTitle icon="parties">Parties</SectionTitle>
+          <label className="block" htmlFor="parties">
+            <span className={labelClass}>Parties to the Document</span>
+            <textarea
+              aria-describedby="parties-help parties-error"
+              aria-invalid={Boolean(state.fieldErrors.parties || localError)}
+              className={`${inputClass} ${
+                state.fieldErrors.parties || localError
+                  ? "border-[#b91c1c] focus:border-[#b91c1c] focus:ring-[#b91c1c]/10"
+                  : ""
+              }`}
+              id="parties"
+              maxLength={160}
+              name="parties"
+              onChange={(event) => {
+                setParties(event.target.value);
+                setLocalError("");
+              }}
+              placeholder="e.g. Chinedu Okafor to Adeola Properties Ltd"
+              value={parties}
+            />
+            <span className="mt-2 block text-xs text-[#637469]" id="parties-help">
+              This appears on the invoice and on your Certificate of Compliance, so use the names as they appear on the instrument. Maximum 160 characters.
+            </span>
+            {state.fieldErrors.parties ? (
+              <span className="mt-2 block text-sm font-medium text-[#b91c1c]" id="parties-error">
+                {state.fieldErrors.parties}
+              </span>
+            ) : null}
+          </label>
+          </Card>
 
-    {stage === "pending" ? <Card as="section" className="rounded-nba-large border-[#e0e2e2] bg-white p-5 text-center" padding="none"><span className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-[#e8f8ef] text-2xl text-nba-primary">✓</span><h2 className="font-serif text-xl">Submission preview complete</h2><p className="mt-2 text-sm leading-[1.5] text-[#66717e]">Your file stayed on this device. No branch review or payment verification has started.</p><Button className={`${outlineButton} mt-4`} onClick={onBack}>Back to calculator</Button></Card> : null}
+          <Button
+            className={greenButton}
+            disabled={Boolean(blockReason) || pending || state.requiresReview}
+            type="submit"
+          >
+            {pending ? "Creating invoice…" : "Generate Invoice"}
+          </Button>
+          <p className="text-xs text-[#6c727c]">Total payable: {formatNaira(fee.branchLevyKobo)}{branch ? ` · ${branch.name}` : ""}</p>
+          <p className="text-center text-xs leading-[1.5] text-[#6c727c]">Generating an invoice does not pay anything. It creates the reference to quote on your bank transfer to the branch.</p>
+        </form>
+          <button
+            className="text-sm font-semibold text-[#3d7a4f] hover:text-[#175c2f]"
+            onClick={onBack}
+            type="button"
+          >
+            ← Back to calculation
+          </button>
 
-    {confirmOpen ? <ConfirmationDialog onCancel={() => setConfirmOpen(false)} onSubmit={() => { setConfirmOpen(false); setStage("pending"); setProof(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}/> : null}
-  </main>;
+      <TermsCard calculation={calculation} context={context} />
+    </div>
+  );
 }

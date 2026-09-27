@@ -348,3 +348,17 @@ button:disabled { cursor: not-allowed; }
   .auth-register-card, .auth-login-card, .auth-recovery-card { padding: 28px 32px; }
   .auth-branch-sheet { right: auto; bottom: 50%; left: 50%; width: min(460px, calc(100% - 32px)); border-radius: 18px; transform: translate(-50%, 50%); }
 }
+
+/* Reference treatment is scoped to the calculator invoice and proof screens. */
+.reference-primary.button { background: #0b5933; color: white; border: 0; border-radius: 9px; min-height: 51px; font-size: 15px; box-shadow: none; }
+.reference-primary.button:disabled { opacity: .6; }
+.reference-outline.button { background: white; color: #0b5933; border: 1.5px solid #0b5933; border-radius: 9px; min-height: 53px; font-size: 15px; box-shadow: none; }
+.reference-proof > div { background: #f7f7f7; font-family: var(--font-geist-sans), Arial, sans-serif; }
+.reference-proof header { position: sticky; top: 0; z-index: 30; height: 64px; background: #f7f7f7; border-color: #e1e4e1; }
+.reference-proof section { border-radius: 13px; border-color: #e0e3e0; }
+@media (min-width: 800px) { .reference-proof header { height: 88px; } }
+.reference-calculator .card, .reference-card.card { border-radius: 13px; border-color: #e0e3e0; background: white; }
+.reference-calculator .reference-details.card { padding: 18px 16px 16px; }
+.reference-card.card { padding: 16px; }
+.reference-primary.button:disabled { color: white; background: #88a99a; }
+.reference-outline.button:hover:not(:disabled) { background: #f1f4f1; }
