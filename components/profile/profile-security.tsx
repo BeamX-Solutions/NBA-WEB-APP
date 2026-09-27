@@ -1,43 +1,95 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { DetailRow, ProfileCard, ProfileIcon, ProfileFrame, ProfileHeading, inputClass, primaryButton } from "@/components/profile/profile-ui";
-import { createClient } from "@/lib/supabase/client";
+import { useActionState, useEffect, useRef } from "react";
+import { changePasswordAction, type SecurityActionState } from "@/app/profile/security/actions";
+import { ProfileCard, ProfileFrame, ProfileHeading, ProfileIcon, inputClass, primaryButton } from "@/components/profile/profile-ui";
+import { FormNotice } from "@/components/ui/form-notice";
 
-export function ProfileSecurity() {
-  const [password, setPassword] = useState("");
-  const [confirmation, setConfirmation] = useState("");
-  const [message, setMessage] = useState("");
-  const [email, setEmail] = useState("Loading…");
-  const [lastSignedIn, setLastSignedIn] = useState("Unavailable");
-  const [pending, setPending] = useState(false);
+type ProfileSecurityProps = {
+  account: {
+    email: string;
+    lastSignedIn: string;
+  };
+};
+
+const initialSecurityActionState: SecurityActionState = { fieldErrors: {}, message: "", status: "idle" };
+
+export function ProfileSecurity({ account }: ProfileSecurityProps) {
+  const [state, formAction, pending] = useActionState(changePasswordAction, initialSecurityActionState);
+  const fieldErrors = state.fieldErrors ?? {};
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    let active = true;
-    createClient().auth.getUser().then(({ data: { user } }) => {
-      if (!active) return;
-      setEmail(user?.email ?? "Unavailable");
-      setLastSignedIn(user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : "Unavailable");
-    }).catch(() => { if (active) setEmail("Unavailable"); });
-    return () => { active = false; };
-  }, []);
+    if (state.status !== "success") return;
+    formRef.current?.reset();
+  }, [state.status]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (password.length < 8) { setMessage("Use at least 8 characters for the new password."); return; }
-    if (password !== confirmation) { setMessage("The passwords do not match."); return; }
-    setPending(true);
-    setMessage("");
-    try {
-      const { error } = await createClient().auth.updateUser({ password });
-      if (error) { setMessage(error.message); return; }
-      setPassword(""); setConfirmation("");
-      setMessage("Password updated.");
-    } catch {
-      setMessage("The password could not be updated. Please try again.");
-    } finally {
-      setPending(false);
-    }
-  }
-  return <ProfileFrame><ProfileHeading description="Manage how you sign in to your account." title="Security"/><div className="mx-auto max-w-[760px] space-y-4"><ProfileCard icon={<ProfileIcon kind="lock"/>} title="Change password"><form className="space-y-5" onSubmit={submit}><div><label className="mb-2 block font-semibold" htmlFor="new-password">New Password</label><input autoComplete="new-password" className={inputClass} id="new-password" minLength={8} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" required type="password" value={password}/></div><div><label className="mb-2 block font-semibold" htmlFor="confirm-password">Confirm New Password</label><input autoComplete="new-password" className={inputClass} id="confirm-password" onChange={(event) => setConfirmation(event.target.value)} placeholder="Re-enter the new password" required type="password" value={confirmation}/></div><button className={primaryButton} disabled={pending} type="submit">{pending ? "Updating…" : "Update Password"}</button>{message ? <p aria-live="polite" className="text-sm text-[#66717e]" role="status">{message}</p> : null}</form></ProfileCard><ProfileCard icon={<ProfileIcon kind="account"/>} title="Account"><dl><DetailRow label="Email" value={email}/><DetailRow label="Last signed in" value={lastSignedIn}/></dl></ProfileCard><p className="text-center text-[14px] leading-[1.5] text-[#66717e]">Your Supreme Court Number and branch cannot be changed here. They identify you on certificates that carry legal weight, so a branch administrator has to make those changes.</p></div></ProfileFrame>;
+  return (
+    <ProfileFrame>
+      <ProfileHeading description="Review your account and keep your sign-in secure." title="Security" />
+      <div className="mx-auto max-w-[760px] space-y-4">
+        <ProfileCard icon={<ProfileIcon kind="account" />} title="Account details">
+          <dl className="divide-y divide-[#eceeee]">
+            <div className="py-3 first:pt-0">
+              <dt className="text-[12px] uppercase tracking-[.06em] text-[#66717e]">Email address</dt>
+              <dd className="mt-1 break-all text-[16px]">{account.email}</dd>
+            </div>
+            <div className="py-3 last:pb-0">
+              <dt className="text-[12px] uppercase tracking-[.06em] text-[#66717e]">Last signed in</dt>
+              <dd className="mt-1 text-[16px]">{account.lastSignedIn}</dd>
+            </div>
+          </dl>
+        </ProfileCard>
+
+        <ProfileCard icon={<ProfileIcon kind="lock" />} title="Change password">
+          <form action={formAction} className="space-y-4" noValidate ref={formRef}>
+            <PasswordField
+              error={fieldErrors.currentPassword}
+              id="currentPassword"
+              label="Current password"
+            />
+            <PasswordField
+              error={fieldErrors.password}
+              help="Use at least 8 characters, including a number."
+              id="password"
+              label="New password"
+            />
+            <PasswordField
+              error={fieldErrors.confirmation}
+              id="confirmation"
+              label="Confirm new password"
+            />
+            {state.message ? <FormNotice tone={state.status === "success" ? "success" : "error"}>{state.message}</FormNotice> : null}
+            <button className={primaryButton} disabled={pending} type="submit">
+              {pending ? "Updating password…" : "Update password"}
+            </button>
+          </form>
+        </ProfileCard>
+      </div>
+    </ProfileFrame>
+  );
+}
+
+function PasswordField({ error, help, id, label }: {
+  error?: string;
+  help?: string;
+  id: string;
+  label: string;
+}) {
+  const descriptionId = error ? `${id}-error` : help ? `${id}-help` : undefined;
+  return (
+    <div>
+      <label className="mb-2 block text-[14px] font-semibold" htmlFor={id}>{label}</label>
+      <input
+        aria-describedby={descriptionId}
+        aria-invalid={Boolean(error)}
+        autoComplete={id === "currentPassword" ? "current-password" : "new-password"}
+        className={`${inputClass} ${error ? "border-[#b91c1c] ring-2 ring-[#b91c1c]/10" : ""}`}
+        id={id}
+        name={id}
+        type="password"
+      />
+      {error ? <p className="auth-error" id={`${id}-error`}>{error}</p> : help ? <p className="mt-2 text-xs text-[#66717e]" id={`${id}-help`}>{help}</p> : null}
+    </div>
+  );
 }

@@ -8,11 +8,21 @@ export async function GET(request: NextRequest) {
   const destination = recovery ? "/reset-password" : "/";
   const failure = recovery ? "/forgot-password?auth_error=link" : "/login?auth_error=link";
 
-  if (!code) return NextResponse.redirect(new URL(failure, request.url));
+  if (!code) {
+    const response = NextResponse.redirect(new URL(failure, request.url));
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
 
   const client = await createClient();
   const { error } = await client.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
-  if (error) return NextResponse.redirect(new URL(failure, request.url));
+  if (error) {
+    const response = NextResponse.redirect(new URL(failure, request.url));
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
 
-  return NextResponse.redirect(new URL(destination, request.url));
+  const response = NextResponse.redirect(new URL(destination, request.url));
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
 }

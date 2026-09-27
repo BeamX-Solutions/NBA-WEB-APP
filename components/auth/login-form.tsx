@@ -5,6 +5,10 @@ import { useState, type FormEvent } from "react";
 import { AuthField, AuthSeal, AuthStatus, AuthSwitchLink } from "./auth-ui";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { friendlyAuthError } from "@/lib/auth/errors";
+import { normalizeEmail, safeInternalPath, validateEmail } from "@/lib/auth/validation";
+
+type LoginErrors = Partial<Record<"email" | "password", string>>;
 
 function VisibilityIcon({ visible }: { visible: boolean }) {
   return (
@@ -16,28 +20,43 @@ function VisibilityIcon({ visible }: { visible: boolean }) {
   );
 }
 
-export function LoginForm({ initialError = "" }: { initialError?: string }) {
+export function LoginForm({ initialError = "", initialSuccess = "" }: { initialError?: string; initialSuccess?: string }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState(initialError);
+  const [errors, setErrors] = useState<LoginErrors>({});
+  const [message, setMessage] = useState(initialError || initialSuccess);
+  const [messageTone, setMessageTone] = useState<"error" | "success">(initialError ? "error" : "success");
   const [pending, setPending] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
-    setPending(true);
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "").trim().toLowerCase();
+    const email = normalizeEmail(String(form.get("email") ?? ""));
+    const nextErrors: LoginErrors = {};
+    const emailError = validateEmail(email);
+    const passwordError = password ? null : "Enter your password.";
+    if (emailError) nextErrors.email = emailError;
+    if (passwordError) nextErrors.password = passwordError;
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setPending(true);
     try {
       const { error } = await createClient().auth.signInWithPassword({ email, password });
-      if (error) { setMessage(error.message); return; }
+      if (error) {
+        setMessageTone("error");
+        setMessage(friendlyAuthError(error, "login"));
+        return;
+      }
       setPassword("");
       const next = new URLSearchParams(window.location.search).get("next");
-      router.replace(next && /^\/(?!\/)[a-zA-Z0-9/_-]*$/.test(next) ? next : "/");
+      router.replace(safeInternalPath(next));
       router.refresh();
-    } catch {
-      setMessage("Log in could not be completed. Please try again.");
+    } catch (error) {
+      setMessageTone("error");
+      setMessage(friendlyAuthError(error, "login"));
     } finally {
       setPending(false);
     }
@@ -53,9 +72,9 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
             <p>Log in to access your dashboard and calculator.</p>
           </div>
 
-          <form className="auth-form" onSubmit={submit}>
-            <AuthField id="login-email" label="Email Address">
-              <input autoComplete="email" className="auth-input" id="login-email" name="email" placeholder="Enter your registered email" required type="email" />
+          <form className="auth-form" noValidate onSubmit={submit}>
+            <AuthField error={errors.email} id="login-email" label="Email Address">
+              <input aria-describedby={errors.email ? "login-email-error" : undefined} aria-invalid={Boolean(errors.email)} autoComplete="email" className="auth-input" id="login-email" name="email" onChange={() => setErrors((current) => ({ ...current, email: undefined }))} placeholder="Enter your registered email" required type="email" />
             </AuthField>
             <div className="auth-field">
               <div className="auth-label-row">
@@ -63,14 +82,15 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
                 <Link href="/forgot-password">Forgot Password?</Link>
               </div>
               <div className="auth-password-wrap">
-                <input autoComplete="current-password" className="auth-input" id="login-password" minLength={8} name="password" onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required type={visible ? "text" : "password"} value={password} />
+                <input aria-describedby={errors.password ? "login-password-error" : undefined} aria-invalid={Boolean(errors.password)} autoComplete="current-password" className="auth-input" id="login-password" name="password" onChange={(event) => { setPassword(event.target.value); setErrors((current) => ({ ...current, password: undefined })); }} placeholder="Enter your password" required type={visible ? "text" : "password"} value={password} />
                 <button aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible} className="auth-visibility" onClick={() => setVisible(!visible)} type="button">
                   <VisibilityIcon visible={visible} />
                 </button>
               </div>
+              {errors.password ? <p className="auth-error" id="login-password-error" role="alert">{errors.password}</p> : null}
             </div>
             <button className="auth-submit" disabled={pending} type="submit">{pending ? "Logging in…" : "Log In"}</button>
-            {message ? <AuthStatus>{message}</AuthStatus> : null}
+            {message ? <AuthStatus tone={messageTone}>{message}</AuthStatus> : null}
           </form>
 
           <div className="auth-divider" />
