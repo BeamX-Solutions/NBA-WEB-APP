@@ -21,6 +21,7 @@ test("invoice, terms, and certificate layout export at A4", async () => {
     const outputs = [
       await createInvoicePdf(invoice),
       await createTermsPdf(basis, "Obinna Nweke", "the sale of the property at 12 Ziks Avenue"),
+      await createTermsPdf(basis, "Test Client", "Test matter", { name: "Test Practitioner", scn: "SCN/TEST", branch: "Test Branch" }),
       await createCertificateLayoutPreviewPdf(),
     ];
     for (const output of outputs) {
@@ -32,7 +33,7 @@ test("invoice, terms, and certificate layout export at A4", async () => {
       }
     }
     assert.equal((await PDFDocument.load(await outputs[0].arrayBuffer())).getPageCount(), 1);
-    assert.equal((await PDFDocument.load(await outputs[2].arrayBuffer())).getPageCount(), 1);
+    assert.equal((await PDFDocument.load(await outputs[3].arrayBuffer())).getPageCount(), 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

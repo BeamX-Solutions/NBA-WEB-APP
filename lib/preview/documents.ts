@@ -25,6 +25,8 @@ export function validateProof(file: File): string | null {
   const extension = file.name.split(".").pop()?.toLowerCase();
   const extensions = new Set(["pdf", "jpg", "jpeg", "png"]);
   if (!types.has(file.type) || !extension || !extensions.has(extension)) return "Select a PDF, JPG, or PNG file.";
+  const expected = file.type === "application/pdf" ? ["pdf"] : file.type === "image/png" ? ["png"] : ["jpg", "jpeg"];
+  if (!expected.includes(extension)) return "The file extension must match its PDF, JPG, or PNG format.";
   if (file.size > 10 * 1024 * 1024) return "Select a file no larger than 10 MB.";
   if (file.size === 0) return "Select a file that is not empty.";
   return null;
