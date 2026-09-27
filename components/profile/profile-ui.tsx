@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { TransactionShell } from "@/components/transactions/transaction-shell";
 
@@ -37,10 +38,12 @@ export function PersonGlyph({ large = false }: { large?: boolean }) {
   return <span aria-hidden="true" className={`grid place-items-center rounded-[20%] border-2 border-[#0d5b38] bg-[#fbfdfc] text-[#66717e] ${large ? "size-[92px]" : "size-[72px]"}`}><svg fill="currentColor" height={large ? 40 : 33} viewBox="0 0 24 24" width={large ? 40 : 33}><circle cx="12" cy="7" r="4"/><path d="M3.5 21c.3-4.4 3.4-7 8.5-7s8.2 2.6 8.5 7H3.5Z"/></svg></span>;
 }
 
-export function DetailRow({ label, value }: { label: string; value: string }) {
-  return <div className="border-b border-[#eceeee] py-4 first:pt-1 last:border-b-0 last:pb-1"><dt className="text-[12px] uppercase tracking-[.06em] text-[#66717e]">{label}</dt><dd className="mt-1 break-words text-[16px] leading-[1.4]">{value}</dd></div>;
+export function ProfileAvatar({ fullName, large = false, url }: { fullName: string; large?: boolean; url: string | null }) {
+  const size = large ? 92 : 72;
+  if (!url) return <PersonGlyph large={large}/>;
+  return <Image alt={`${fullName} profile photo`} className={`rounded-[20%] border-2 border-[#0d5b38] object-cover ${large ? "size-[92px]" : "size-[72px]"}`} height={size} src={url} width={size}/>;
 }
 
-export function PreviewNote({ children }: { children: ReactNode }) {
-  return <p className="text-center text-[12px] leading-[1.5] text-[#69737d]">{children}</p>;
+export function DetailRow({ label, value }: { label: string; value: string }) {
+  return <div className="border-b border-[#eceeee] py-4 first:pt-1 last:border-b-0 last:pb-1"><dt className="text-[12px] uppercase tracking-[.06em] text-[#66717e]">{label}</dt><dd className="mt-1 break-words text-[16px] leading-[1.4]">{value}</dd></div>;
 }

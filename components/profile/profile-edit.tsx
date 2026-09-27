@@ -1,64 +1,109 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { PersonGlyph, PreviewNote, ProfileCard, ProfileFrame, ProfileHeading, inputClass, primaryButton, profileFocus } from "@/components/profile/profile-ui";
-import { previewIdentity, profileStorageKey, parsePreviewProfile, type PreviewProfile } from "@/lib/profile/preview-profile";
-import { useLocalPreview } from "@/lib/profile/use-local-preview";
+import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { updateProfileAction, type ProfileActionState } from "@/app/profile/edit/actions";
+import { FormNotice, type NoticeTone } from "@/components/ui/form-notice";
+import { ProfileAvatar, ProfileCard, ProfileFrame, ProfileHeading, inputClass, primaryButton, profileFocus } from "@/components/profile/profile-ui";
+import type { PractitionerProfile } from "@/lib/profile/types";
+import { nigerianStates } from "@/lib/profile/validation";
 
-const states = ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"];
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const initialProfileActionState: ProfileActionState = { fieldErrors: {}, message: "", status: "idle" };
 
-export function ProfileEdit() {
-  const saved = useLocalPreview(profileStorageKey);
-  return <ProfileEditForm initialProfile={parsePreviewProfile(saved)} key={saved ?? "default"}/>;
+type AvatarNotice = { message: string; tone: NoticeTone } | null;
+
+function readAvatarResponse(value: unknown): { message: string; url?: string } {
+  if (!value || typeof value !== "object") return { message: "The photo could not be uploaded. Try again." };
+  const record = value as Record<string, unknown>;
+  return {
+    message: typeof record.message === "string" ? record.message : "The photo could not be uploaded. Try again.",
+    url: typeof record.url === "string" ? record.url : undefined,
+  };
 }
 
-function ProfileEditForm({ initialProfile }: { initialProfile: PreviewProfile }) {
+export function ProfileEdit({ profile }: { profile: PractitionerProfile }) {
   const router = useRouter();
-  const [profile, setProfile] = useState<PreviewProfile>(initialProfile);
-  const [photoUrl, setPhotoUrl] = useState("");
-  const [message, setMessage] = useState("");
+  const [state, formAction, pending] = useActionState(updateProfileAction, initialProfileActionState);
+  const fieldErrors = state.fieldErrors ?? {};
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [avatarNotice, setAvatarNotice] = useState<AvatarNotice>(null);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const photoRef = useRef("");
-  useEffect(() => () => { if (photoRef.current) URL.revokeObjectURL(photoRef.current); }, []);
+  const previewRef = useRef("");
 
-  function changePhoto(event: ChangeEvent<HTMLInputElement>) {
+  useEffect(() => () => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+  }, []);
+
+  async function changePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!acceptedTypes.has(file.type) || file.size > 2 * 1024 * 1024) {
-      setMessage("Choose a JPG, PNG, or WebP image smaller than 2 MB.");
+    if (!acceptedTypes.has(file.type)) {
+      setAvatarNotice({ message: "Choose a JPG, PNG, or WebP image.", tone: "error" });
       event.target.value = "";
       return;
     }
-    if (photoRef.current) URL.revokeObjectURL(photoRef.current);
-    const url = URL.createObjectURL(file);
-    photoRef.current = url;
-    setPhotoUrl(url);
-    setMessage("Photo preview loaded. It is not uploaded or saved.");
-  }
-
-  function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const fullName = profile.fullName.trim();
-    const phone = profile.phone.trim();
-    if (fullName.length < 2 || phone.length < 7 || !states.includes(profile.practiceState)) {
-      setMessage("Enter a full name, valid phone number, and practice state.");
+    if (file.size <= 0 || file.size > 2 * 1024 * 1024) {
+      setAvatarNotice({ message: "Choose an image smaller than 2 MB.", tone: "error" });
+      event.target.value = "";
       return;
     }
+
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    const localUrl = URL.createObjectURL(file);
+    previewRef.current = localUrl;
+    setPreviewUrl(localUrl);
+    setUploading(true);
+    setAvatarNotice({ message: "Uploading profile photo…", tone: "info" });
+
+    const formData = new FormData();
+    formData.set("avatar", file);
     try {
-      window.localStorage.setItem(profileStorageKey, JSON.stringify({ fullName, phone, practiceState: profile.practiceState }));
-      setMessage("Profile preview saved on this device. No official record was changed.");
+      const response = await fetch("/profile/edit/avatar", { body: formData, method: "POST" });
+      const result = readAvatarResponse(await response.json());
+      if (!response.ok || !result.url) {
+        setAvatarNotice({ message: result.message, tone: "error" });
+        return;
+      }
+      setAvatarUrl(result.url);
+      setPreviewUrl("");
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+      previewRef.current = "";
+      setAvatarNotice({ message: result.message, tone: "success" });
+      router.refresh();
     } catch {
-      setMessage("This browser could not save the profile preview.");
+      setAvatarNotice({ message: "The photo could not be uploaded. Check your connection and try again.", tone: "error" });
+    } finally {
+      setUploading(false);
+      event.target.value = "";
     }
   }
 
-  return <ProfileFrame><ProfileHeading description="Update your official information." title="Edit Profile"/><form className="mx-auto max-w-[760px] space-y-4" onSubmit={save}>
-    <ProfileCard className="flex flex-col items-center gap-3 text-center"><div className="relative">{photoUrl ? <Image alt="Selected profile photo preview" className="size-[92px] rounded-[20%] border-2 border-[#0d5b38] object-cover" height={92} src={photoUrl} unoptimized width={92}/> : <PersonGlyph large/>}</div><input accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={changePhoto} ref={inputRef} type="file"/><button className={`rounded-[10px] bg-[#0d5b38] px-6 py-3 text-[16px] font-semibold text-white ${profileFocus}`} onClick={() => inputRef.current?.click()} type="button">Add Photo</button><p className="text-[13px] text-[#66717e]">JPG, PNG or WebP. Max size of 2MB.</p></ProfileCard>
-    <ProfileCard title="Personal Information"><div className="space-y-5"><div><label className="mb-2 block font-semibold" htmlFor="profile-name">Full Name</label><input autoComplete="name" className={inputClass} id="profile-name" onChange={(event) => setProfile({ ...profile, fullName: event.target.value })} required value={profile.fullName}/></div><div><label className="mb-2 block font-semibold" htmlFor="profile-scn">Supreme Court Number (SCN)</label><input className={inputClass} disabled id="profile-scn" value={previewIdentity.scn}/><p className="mt-1 text-[13px] text-[#66717e]">SCN cannot be changed once verified.</p></div><div><label className="mb-2 block font-semibold" htmlFor="profile-phone">Phone Number</label><input autoComplete="tel" className={inputClass} id="profile-phone" onChange={(event) => setProfile({ ...profile, phone: event.target.value })} required type="tel" value={profile.phone}/></div></div></ProfileCard>
-    <ProfileCard title="Professional Information"><div className="space-y-5"><div><label className="mb-2 block font-semibold" htmlFor="profile-branch">Branch Affiliation</label><input className={inputClass} disabled id="profile-branch" value={previewIdentity.branch}/><p className="mt-1 text-[13px] text-[#66717e]">Contact your branch administrator to change your affiliation.</p></div><div><label className="mb-2 block font-semibold" htmlFor="profile-state">Practice State</label><select className={inputClass} id="profile-state" onChange={(event) => setProfile({ ...profile, practiceState: event.target.value })} value={profile.practiceState}>{states.map((state) => <option key={state} value={state}>{state}</option>)}</select><p className="mt-1 text-[13px] text-[#66717e]">Recorded on your profile for branch administration. It does not affect the fee.</p></div><div className="space-y-2"><button className={primaryButton} type="submit">Save Changes</button><button className={`min-h-[52px] w-full rounded-[10px] border border-[#d9dedb] bg-white text-[16px] font-semibold ${profileFocus}`} onClick={() => router.push("/profile")} type="button">Cancel</button></div></div></ProfileCard>
-    {message ? <p aria-live="polite" className="text-center text-sm text-[#66717e]" role="status">{message}</p> : null}<PreviewNote>Changes here are a local preview and do not update an official profile.</PreviewNote>
-  </form></ProfileFrame>;
+  return <ProfileFrame><ProfileHeading description="Update the information your branch allows you to manage." title="Edit Profile"/><div className="mx-auto max-w-[760px] space-y-4">
+    <ProfileCard className="flex flex-col items-center gap-3 text-center">
+      {previewUrl ? <Image alt="Selected profile photo preview" className="size-[92px] rounded-[20%] border-2 border-[#0d5b38] object-cover" height={92} src={previewUrl} unoptimized width={92}/> : <ProfileAvatar fullName={profile.fullName} large url={avatarUrl}/>}
+      <input accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={changePhoto} ref={inputRef} type="file"/>
+      <button className={`rounded-[10px] bg-[#0d5b38] px-6 py-3 text-[16px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${profileFocus}`} disabled={uploading} onClick={() => inputRef.current?.click()} type="button">{uploading ? "Uploading…" : avatarUrl ? "Change Photo" : "Add Photo"}</button>
+      <p className="text-[13px] text-[#66717e]">JPG, PNG or WebP. Maximum size 2 MB.</p>
+      {avatarNotice ? <FormNotice className="w-full text-left" tone={avatarNotice.tone}>{avatarNotice.message}</FormNotice> : null}
+    </ProfileCard>
+
+    <form action={formAction} className="space-y-4" noValidate>
+      <ProfileCard title="Personal Information"><div className="space-y-5">
+        <div><label className="mb-2 block font-semibold" htmlFor="profile-name">Full Name</label><input aria-describedby={fieldErrors.fullName ? "profile-name-error" : undefined} aria-invalid={Boolean(fieldErrors.fullName)} autoComplete="name" className={`${inputClass} ${fieldErrors.fullName ? "border-[#b91c1c] ring-2 ring-[#b91c1c]/10" : ""}`} defaultValue={profile.fullName} id="profile-name" name="fullName"/>{fieldErrors.fullName ? <p className="auth-error" id="profile-name-error" role="alert">{fieldErrors.fullName}</p> : null}</div>
+        <div><label className="mb-2 block font-semibold" htmlFor="profile-email">Email Address</label><input className={inputClass} disabled id="profile-email" value={profile.email}/><p className="mt-1 text-[13px] text-[#66717e]">Your sign-in email cannot be changed from this profile.</p></div>
+        <div><label className="mb-2 block font-semibold" htmlFor="profile-scn">Supreme Court Number (SCN)</label><input className={inputClass} disabled id="profile-scn" value={profile.scn}/><p className="mt-1 text-[13px] text-[#66717e]">Contact your branch administrator if this verified identifier is incorrect.</p></div>
+        <div><label className="mb-2 block font-semibold" htmlFor="profile-phone">Phone Number</label><input aria-describedby={fieldErrors.phone ? "profile-phone-error" : undefined} aria-invalid={Boolean(fieldErrors.phone)} autoComplete="tel" className={`${inputClass} ${fieldErrors.phone ? "border-[#b91c1c] ring-2 ring-[#b91c1c]/10" : ""}`} defaultValue={profile.phone} id="profile-phone" name="phone" type="tel"/>{fieldErrors.phone ? <p className="auth-error" id="profile-phone-error" role="alert">{fieldErrors.phone}</p> : null}</div>
+      </div></ProfileCard>
+      <ProfileCard title="Professional Information"><div className="space-y-5">
+        <div><label className="mb-2 block font-semibold" htmlFor="profile-branch">Branch Affiliation</label><input className={inputClass} disabled id="profile-branch" value={profile.branchName}/><p className="mt-1 text-[13px] text-[#66717e]">Contact your branch administrator to change your affiliation.</p></div>
+        <div><label className="mb-2 block font-semibold" htmlFor="profile-state">Practice State</label><select aria-describedby={fieldErrors.practiceState ? "profile-state-error" : undefined} aria-invalid={Boolean(fieldErrors.practiceState)} className={`${inputClass} ${fieldErrors.practiceState ? "border-[#b91c1c] ring-2 ring-[#b91c1c]/10" : ""}`} defaultValue={profile.practiceState || profile.branchState || ""} id="profile-state" name="practiceState"><option disabled value="">Select a state</option>{nigerianStates.map((stateName) => <option key={stateName} value={stateName}>{stateName}</option>)}</select>{fieldErrors.practiceState ? <p className="auth-error" id="profile-state-error" role="alert">{fieldErrors.practiceState}</p> : <p className="mt-1 text-[13px] text-[#66717e]">This does not change your branch or fee calculation.</p>}</div>
+        <div className="space-y-2"><button className={primaryButton} disabled={pending} type="submit">{pending ? "Saving…" : "Save Changes"}</button><button className={`min-h-[52px] w-full rounded-[10px] border border-[#d9dedb] bg-white text-[16px] font-semibold ${profileFocus}`} onClick={() => router.push("/profile")} type="button">Cancel</button></div>
+      </div></ProfileCard>
+      {state.message ? <FormNotice tone={state.status === "success" ? "success" : "error"}>{state.message}</FormNotice> : null}
+    </form>
+  </div></ProfileFrame>;
 }
