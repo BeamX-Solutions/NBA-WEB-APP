@@ -3,7 +3,6 @@
 import { calculateLegalFee } from "@/lib/fees/legal-fees";
 import { isUuid, safeInvoiceErrorMessage, validateInvoiceInput } from "@/lib/calculator/contracts";
 import type { CreateInvoiceActionState } from "@/lib/calculator/types";
-import { money } from "@/lib/transactions/contracts";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,7 +20,6 @@ export async function createInvoiceAction(
     amount: String(formData.get("amount") ?? ""),
     documentId: String(formData.get("documentId") ?? ""),
     parties: String(formData.get("parties") ?? ""),
-    poaBasis: String(formData.get("poaBasis") ?? ""),
   });
   if (!validation.data) {
     return { fieldErrors: validation.fieldErrors, message: "Review the highlighted details.", status: "error", transaction: null };
@@ -46,17 +44,18 @@ export async function createInvoiceAction(
   }
 
   const { amountKobo, databaseDocumentType, document, parties } = validation.data;
-  const fee = calculateLegalFee(document.category, amountKobo);
+  // Recomputed here rather than taken from the browser. create_transaction checks the branch fee again.
+  const fee = calculateLegalFee(document, amountKobo);
 
   let rpcResult: Awaited<ReturnType<typeof client.rpc>>;
   try {
     rpcResult = await client.rpc("create_transaction", {
-      p_branch_fee: fee.branchLevyKobo.toString(),
+      p_branch_fee: fee.branchFeeKobo.toString(),
       p_breakdown: breakdownForRpc(fee.lines),
       p_consideration: amountKobo.toString(),
       p_document_type: databaseDocumentType,
       p_parties: parties,
-      p_professional_fee: fee.primaryFeeKobo.toString(),
+      p_professional_fee: fee.professionalFeeKobo.toString(),
     });
   } catch {
     return { fieldErrors: {}, message: "The invoice response was interrupted. Check Transactions before creating another invoice.", requiresReview: true, status: "error", transaction: null };
@@ -72,18 +71,11 @@ export async function createInvoiceAction(
     return { fieldErrors: {}, requiresReview: true, message: "The invoice was created but its reference could not be confirmed. Check Transactions before trying again.", status: "error", transaction: null };
   }
 
-  let amountPayable: string | null = null;
-  try {
-    const stored = await client.from("transactions").select("amount_payable").eq("id", row.transaction_id).eq("user_id", user.id).maybeSingle();
-    if (!stored.error) amountPayable = money(stored.data?.amount_payable);
-  } catch {
-    // The invoice is confirmed even if its payment details cannot be reloaded.
-  }
   revalidatePath("/transactions");
   return {
     fieldErrors: {},
     message: "Invoice created successfully.",
     status: "success",
-    transaction: { id: row.transaction_id, invoiceNumber: row.invoice_number.trim(), amountPayable },
+    transaction: { id: row.transaction_id, invoiceNumber: row.invoice_number.trim() },
   };
 }

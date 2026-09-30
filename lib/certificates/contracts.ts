@@ -7,12 +7,13 @@ function documentLabel(value: unknown): string | null {
   return DOCUMENT_TYPES.find(item => databaseDocumentTypes[item.id as keyof typeof databaseDocumentTypes] === value)?.label ?? null;
 }
 
-function issueDate(value: unknown): { date: string; year: string } | null {
+function issueDate(value: unknown): { date: string; long: string; year: string } | null {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}[T ]/.test(value)) return null;
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return null;
   return {
     date: new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos" }).format(date),
+    long: new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", day: "numeric", month: "long", year: "numeric" }).format(date),
     year: new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", year: "numeric" }).format(date),
   };
 }
@@ -22,14 +23,39 @@ export function normalizeRbin(value: string): string | null {
   return /^[A-Z0-9][A-Z0-9/._-]{0,199}$/.test(normalized) ? normalized : null;
 }
 
-// Encoded slash segments may remain encoded in Next.js params. Decode at most once.
-export function decodeRbinSegment(value: string): string | null {
-  if (!value.includes("%")) return normalizeRbin(value);
-  try { return normalizeRbin(decodeURIComponent(value)); } catch { return null; }
+/** Catch-all route segments, each decoded at most once (encoded slashes may stay encoded in params): `/verify/NBA%2F2026%2F1` arrives as one segment, `/verify/NBA/2026/1` as three. */
+export function rbinFromSegments(segments: readonly string[]): string | null {
+  if (!segments.length) return null;
+  const decoded: string[] = [];
+  for (const segment of segments) {
+    try { decoded.push(segment.includes("%") ? decodeURIComponent(segment) : segment); } catch { return null; }
+  }
+  return normalizeRbin(decoded.join("/"));
 }
 
 export function verificationPath(rbin: string): string {
   return `/verify/${encodeURIComponent(rbin)}`;
+}
+
+/**
+ * Host of the public verification page printed into certificate QR codes. Shared with mobile
+ * (EXPO_PUBLIC_VERIFICATION_URL) and must not change once real certificates are issued.
+ */
+export const DEFAULT_VERIFICATION_BASE_URL = "https://nba-mobile-app.vercel.app";
+
+export function verificationBaseUrl(value: string | undefined = process.env.NEXT_PUBLIC_VERIFICATION_URL): string {
+  try {
+    const url = new URL(value ?? "");
+    if (url.protocol !== "https:" && url.protocol !== "http:") return DEFAULT_VERIFICATION_BASE_URL;
+    return `${url.origin}${url.pathname}`.replace(/\/+$/, "");
+  } catch {
+    return DEFAULT_VERIFICATION_BASE_URL;
+  }
+}
+
+/** Identical to mobile verificationUrlFor, so both apps print the same QR target. */
+export function verificationUrlFor(rbin: string, base: string = verificationBaseUrl()): string {
+  return `${base}${verificationPath(rbin)}`;
 }
 
 export function parseCertificate(value: unknown, identity: { name: string; scn: string }): Certificate | null {
@@ -46,12 +72,12 @@ export function parseCertificate(value: unknown, identity: { name: string; scn: 
   const branchName = text(branch.name);
   if (!rbin || !normalizeRbin(rbin) || !number || !issued || !document || !consideration || !parties || !branchName) return null;
   if (row.revoked_at !== null && !issueDate(row.revoked_at)) return null;
-  if (row.pdf_url !== null && !text(row.pdf_url)) return null;
   return {
-    id: row.id, year: issued.year, rbin, certificateNumber: number, issuedAt: issued.date,
+    id: row.id, year: issued.year, rbin, certificateNumber: number, issuedAt: issued.date, issuedOn: issued.long,
     documentType: document, practitioner: identity.name, scn: identity.scn,
     parties, consideration, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
-    revoked: row.revoked_at !== null, revocationReason: text(row.revocation_reason), pdfUrl: text(row.pdf_url),
+    chairmanSignaturePath: text(branch.chairman_signature_url),
+    revoked: row.revoked_at !== null, revocationReason: text(row.revocation_reason),
   };
 }
 
@@ -67,19 +93,4 @@ export function parseVerification(value: unknown): VerificationRecord | null {
   const branch = text(row.branch_name);
   if (!rbin || !normalizeRbin(rbin) || !certificateNumber || !issued || !documentType || !practitioner || !scn || !branch) return null;
   return { rbin, certificateNumber, issuedAt: issued.date, documentType, practitioner, scn, branch, revoked: row.revoked, revocationReason: text(row.revocation_reason) };
-}
-
-// Only known project Storage URLs can be resolved through the owner's Storage session.
-export function certificatePdfLocation(value: string | null, projectUrl: string): { bucket: string; path: string } | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:" || url.origin !== new URL(projectUrl).origin || url.username || url.password) return null;
-    const match = /^\/storage\/v1\/object\/(?:public|authenticated|sign)\/([^/]+)\/(.+)$/.exec(url.pathname);
-    if (!match) return null;
-    const bucket = decodeURIComponent(match[1]);
-    const path = decodeURIComponent(match[2]);
-    if (bucket.includes("/") || path.split("/").some(segment => !segment || segment === "." || segment === "..") || /[\\\x00-\x1f]/.test(bucket + path)) return null;
-    return { bucket, path };
-  } catch { return null; }
 }

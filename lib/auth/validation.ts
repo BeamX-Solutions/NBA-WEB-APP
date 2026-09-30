@@ -5,6 +5,14 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\+?[0-9][0-9\s()-]{6,19}$/;
 const scnPattern = /^[A-Za-z0-9][A-Za-z0-9/ -]{2,39}$/;
 
+export function isValidPhone(value: string): boolean {
+  return phonePattern.test(value.trim());
+}
+
+export function isValidScn(value: string): boolean {
+  return scnPattern.test(value.trim());
+}
+
 export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }

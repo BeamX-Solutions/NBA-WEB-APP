@@ -1,79 +1,88 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { TransactionShell } from "@/components/transactions/transaction-shell";
-import { FormNotice, type NoticeTone } from "@/components/ui/form-notice";
-import { verificationPath as certificateVerificationPath } from "@/lib/certificates/contracts";
+import { Button } from "@/components/mobile/button";
+import { Card } from "@/components/mobile/card";
+import { Icon } from "@/components/mobile/icon";
+import { Screen, SectionTitle } from "@/components/mobile/screen";
+import { Notice, type NoticeTone } from "@/components/mobile/states";
+import { CERTIFICATE_NOTE, CERTIFICATE_RECITAL, certificateParticulars } from "@/lib/certificates/wording";
 import type { Certificate } from "@/lib/certificates/types";
 import { downloadPdf } from "@/lib/preview/documents";
 
-const fields: readonly [string, keyof Certificate][] = [
-  ["NAME OF LAWYER", "practitioner"],
-  ["RBIN", "rbin"],
-  ["SUPREME COURT NUMBER", "scn"],
-  ["PARTIES TO THE DOCUMENT", "parties"],
-  ["TYPE OF DOCUMENT", "documentType"],
-  ["CONSIDERATION", "consideration"],
-];
-
-export function CertificateDetail({ certificate, pdfAvailable }: { certificate: Certificate; pdfAvailable: boolean }) {
+/**
+ * mobile certificate/[id]. The branch's paper and gold adapted for a screen: a single gold rule rather
+ * than the printed double frame, and the particulars stacked rather than tabulated. The colours are the
+ * branch's document colours, deliberately not theme tokens, exactly as on mobile.
+ */
+export function CertificateDetail({ certificate, verificationUrl }: { certificate: Certificate; verificationUrl: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState("");
-  const [statusTone, setStatusTone] = useState<NoticeTone>("error");
+  const [status, setStatus] = useState<{ message: string; tone: NoticeTone } | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const verificationPath = certificateVerificationPath(certificate.rbin);
+  const particulars = certificateParticulars(certificate);
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const url = new URL(verificationPath, window.location.origin).href;
     let active = true;
-    QRCode.toCanvas(canvasRef.current, url, { width: 112, margin: 0, color: { dark: "#193b2b", light: "#fffdf6" } }).catch(() => { if (active) { setStatusTone("error"); setStatus("Could not draw the verification QR code. Use the verification link below."); } });
+    QRCode.toCanvas(canvasRef.current, verificationUrl, { width: 78, margin: 0, color: { dark: "#14301F", light: "#FBF7EF" } }).catch(() => { if (active) setStatus({ message: "Could not draw the verification QR code. Use the verification link below.", tone: "error" }); });
     return () => { active = false; };
-  }, [verificationPath]);
+  }, [verificationUrl]);
 
   async function download() {
-    if (!pdfAvailable || downloading) return;
+    if (downloading) return;
     setDownloading(true);
-    setStatus("");
+    setStatus(null);
     try {
       const response = await fetch(`/certificates/${certificate.id}/pdf`, { cache: "no-store" });
       if (!response.ok || !response.headers.get("content-type")?.startsWith("application/pdf")) {
-        setStatusTone("error");
-        setStatus(response.status === 409 ? "This certificate is revoked and cannot be downloaded." : "The certificate PDF is unavailable. Please contact your branch administrator.");
+        setStatus({ message: "The PDF could not be generated. Please try again.", tone: "error" });
         return;
       }
-      const pdf = await response.blob();
-      downloadPdf(pdf, `certificate-${certificate.id}.pdf`);
-      setStatusTone("success");
-      setStatus("Certificate PDF downloaded.");
+      downloadPdf(await response.blob(), `certificate-${certificate.certificateNumber.replace(/[^A-Za-z0-9-]/g, "-")}.pdf`);
+      setStatus({ message: certificate.revoked ? "Certificate PDF downloaded. It is marked REVOKED." : "Certificate PDF downloaded.", tone: "success" });
     } catch {
-      setStatusTone("error");
-      setStatus("Could not download the certificate PDF. Please try again.");
+      setStatus({ message: "Could not download the certificate PDF. Check your connection and try again.", tone: "error" });
     } finally {
       setDownloading(false);
     }
   }
 
-  return <TransactionShell><main className="mx-auto max-w-[900px] px-4 pt-5 pb-12 min-[800px]:px-7 min-[800px]:pt-8">
-    <article aria-label="Certificate of Compliance" className="relative border-[3px] border-[#b38b37] bg-[#fffcf5] p-[5px] text-[#18392b] shadow-sm">
-      <span className="absolute top-[6px] right-[10px] bg-[#fffcf5] px-1 text-[10px] font-bold tracking-wide text-[#805b20]">{certificate.revoked ? "REVOKED" : "ISSUED"}</span>
-      <div className="border border-[#cdb980] px-4 py-5 min-[800px]:px-12 min-[800px]:py-12">
-        <header className="flex items-center gap-3"><Image alt="Nigerian Bar Association seal" className="size-[48px] shrink-0 object-contain min-[800px]:size-[80px]" height={80} src="/nba-seal.png" width={80}/><div><p className="font-serif text-[15px] leading-[1.15] font-bold min-[800px]:text-[30px]">NIGERIAN BAR ASSOCIATION</p><p className="mt-2 text-[11px] font-bold tracking-[.2em] min-[800px]:text-[17px]">{certificate.branch}</p></div></header>
-        <div className="mt-4 border-t border-[#b38b37] pt-4 text-center"><h1 className="font-serif text-[27px] leading-[1.07] font-bold min-[800px]:text-[42px]">CERTIFICATE OF<br/>COMPLIANCE</h1></div>
-        <div className="mt-4 border-t border-[#b38b37] pt-4 text-center"><p className="text-[13px] tracking-[.15em] italic min-[800px]:text-[19px]">THIS IS TO CERTIFY THAT</p><p className="mx-auto mt-4 max-w-[670px] text-[14px] leading-[1.7] min-[800px]:text-[19px]">The undersigned Legal Practitioner whose particulars appear below has duly prepared the title document as described herein in accordance with the Rules of Professional Conduct, the Legal Practitioners Act and the Branch Remuneration Order.</p></div>
-        <dl className="mt-4">{fields.map(([label, key], index) => <div className="border-b border-[#d8cba6] py-3" key={key}><dt className="text-[11px] font-bold tracking-[.08em] text-[#53645d] min-[800px]:text-[15px]">{index + 1}. {label}</dt><dd className="mt-2 break-words text-[17px] leading-[1.35] font-bold min-[800px]:text-[22px]">{certificate[key]}</dd></div>)}</dl>
-        <p className="mt-7 text-center text-[14px] leading-[1.65] italic text-[#45534c] min-[800px]:text-[17px]">This Certificate is issued as evidence of compliance with the Branch Remuneration Order and for record purposes.</p>
-        <div className="mt-6 grid grid-cols-2 gap-4 text-[13px] min-[800px]:text-[16px]"><div><strong className="block text-[#53645d]">Date of Issue</strong><span className="mt-1 block">{certificate.issuedAt}</span></div><div><strong className="block text-[#53645d]">Certificate No.</strong><span className="mt-1 block break-all">{certificate.certificateNumber}</span></div></div>
-        <div className="mt-8 flex items-end justify-between gap-3"><div className="text-center"><canvas aria-label="Certificate verification QR code" className="mx-auto size-[112px] max-w-full" ref={canvasRef} role="img"/><p className="mt-1 text-[11px] tracking-wider text-[#53645d]">Scan to verify</p></div><div className="min-w-0 max-w-[55%] border-t border-[#18392b] pt-2 text-right text-[12px] min-[800px]:text-[16px]"><strong className="block">{certificate.chairman}</strong><span className="block tracking-widest">CHAIRMAN</span><span className="block tracking-wider">{/^NBA\b/i.test(certificate.branch) ? certificate.branch : `NBA ${certificate.branch}`}</span></div></div>
+  return <Screen>
+    <article aria-label="Certificate of Compliance" className="rounded-[4px] border-2 border-[#B8912F] bg-[#FBF7EF] p-[5px]">
+      <div className="border border-[#CBB98C] px-4 py-6">
+        <div className="flex items-center gap-3">
+          <Image alt="Nigerian Bar Association seal" className="size-[54px] object-contain" height={54} src="/nba-seal.png" width={54}/>
+          <div className="flex-1"><p className="font-heading text-body-lg leading-[22px] font-bold text-[#123D24]">NIGERIAN BAR ASSOCIATION</p><p className="mt-[2px] text-caption font-bold tracking-[2.5px] text-[#123D24]">{certificate.branch.replace(/^NBA\s+/i, "").toUpperCase()}</p></div>
+        </div>
+        <div className="my-3 h-px bg-[#B99B45]"/>
+        <h1 className="m-0 text-center font-heading text-[22px] leading-[27px] font-bold tracking-[0.5px] text-[#123D24]">CERTIFICATE OF COMPLIANCE</h1>
+        <div className="my-3 h-px bg-[#B99B45]"/>
+        <p className="mt-1 text-center text-caption tracking-[1px] text-[#14301F] italic">THIS IS TO CERTIFY THAT</p>
+        <p className="mt-2 text-center text-caption leading-[21px] text-[#14301F]">{CERTIFICATE_RECITAL}</p>
+        {certificate.revoked ? <div className="mt-3 rounded-input border border-danger bg-danger-surface p-3"><p className="text-center text-label font-bold text-danger">REVOKED{certificate.revocationReason ? `: ${certificate.revocationReason}` : ""}</p></div> : null}
+        <dl className="m-0">{particulars.map(({ label, value }, index) => <div className="mt-4 border-b border-[#DCD2B4] pb-1" key={label}><dt className="text-[11px] font-bold tracking-[0.6px] text-[#5C6B5B]">{index + 1}. {label}</dt><dd className="m-0 mt-[3px] wrap-break-word text-body leading-[21px] font-bold text-[#14301F]">{value}</dd></div>)}</dl>
+        <p className="mt-6 text-center text-[11px] leading-[17px] text-[#40503F] italic">{CERTIFICATE_NOTE}</p>
+        <div className="mt-4 flex justify-between gap-3">
+          <div><p className="text-[10px] font-bold tracking-[0.5px] text-[#5C6B5B]">Date of Issue</p><p className="mt-[2px] text-caption text-[#14301F]">{certificate.issuedAt}</p></div>
+          <div className="text-right"><p className="text-[10px] font-bold tracking-[0.5px] text-[#5C6B5B]">Certificate No.</p><p className="mt-[2px] break-all text-caption text-[#14301F]">{certificate.certificateNumber}</p></div>
+        </div>
+        <div className="mt-6 flex items-end justify-between gap-3">
+          <div className="flex min-w-[78px] flex-col items-center"><canvas aria-label="Certificate verification QR code" className="size-[78px]" ref={canvasRef} role="img"/><p className="mt-1 text-[9px] tracking-[0.3px] text-[#5C6B5B]">Scan to verify</p></div>
+          <div className="flex flex-1 flex-col items-end"><p className="border-t border-[#14301F] pt-1 text-label font-semibold text-[#14301F]">{certificate.chairman === "Unavailable" ? "Branch Chairman" : certificate.chairman}</p><p className="text-[10px] tracking-[0.4px] text-[#40503F]">CHAIRMAN</p><p className="text-right text-[10px] tracking-[0.4px] text-[#40503F]">{certificate.branch.toUpperCase()}</p></div>
+        </div>
       </div>
     </article>
-    <section className="mt-5 rounded-[14px] border border-[#e9be55] bg-[#fff8de] p-4 text-[#6f571e] min-[800px]:p-6"><h2 className="border-b border-[#e6d8ae] pb-3 font-serif text-[23px] font-bold text-[#175b3b]">▦ Verification</h2><p className="mt-4 text-[15px] leading-[1.5]">Scan the QR code or open the link below to check the certificate’s current status in the NBA registry.</p><Link className="mt-5 block break-all font-semibold text-[#155c3a] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-nba-focus" href={verificationPath}>{verificationPath}</Link></section>
-    {certificate.revoked ? <FormNotice className="mt-5" tone="error">This certificate has been revoked and is no longer valid.{certificate.revocationReason ? ` Reason: ${certificate.revocationReason}` : ""}</FormNotice> : !pdfAvailable ? <FormNotice className="mt-5" tone="info">The official PDF is not available yet. Please contact your branch administrator.</FormNotice> : null}
-    <button className="mt-5 min-h-[56px] w-full rounded-[11px] border-0 bg-[#0d5b38] px-4 text-[18px] font-semibold text-white focus-visible:outline-[3px] focus-visible:outline-nba-focus focus-visible:outline-offset-2 disabled:opacity-60" disabled={downloading || !pdfAvailable} onClick={download} type="button">{downloading ? "Downloading PDF…" : certificate.revoked ? "Certificate Revoked" : !pdfAvailable ? "PDF Unavailable" : "Download PDF"}</button>
-    <Link className="mt-6 inline-block text-sm font-semibold text-[#0d5b38] focus-visible:outline-2 focus-visible:outline-nba-focus" href="/certificates">← My Certificates</Link>
-    {status ? <FormNotice className="mt-3" tone={statusTone}>{status}</FormNotice> : null}
-  </main></TransactionShell>;
+
+    <Card className="mt-4 border-accent bg-accent-surface">
+      <SectionTitle icon="qr-code-2" underline>Verification</SectionTitle>
+      <p className="text-caption leading-[17px] text-accent-text">Anyone can confirm this certificate is genuine by scanning the code above, or by looking up the RBIN at the address below. The public record shows the practitioner, document type and issue date only. It never discloses the consideration or the names of the parties.</p>
+      <a className="mt-3 flex items-center gap-1 text-caption font-semibold text-primary" href={verificationUrl} rel="noopener noreferrer" target="_blank"><Icon name="open-in-new" size={18}/><span className="min-w-0 flex-1 break-all">{verificationUrl}</span></a>
+    </Card>
+
+    {certificate.revoked ? <Notice className="mt-4" tone="error">This certificate has been revoked and is no longer valid. Any PDF you download is marked REVOKED.</Notice> : null}
+    <div className="mt-4"><Button loading={downloading} onClick={download}>Download PDF</Button></div>
+    {status ? <Notice className="mt-3" tone={status.tone}>{status.message}</Notice> : null}
+  </Screen>;
 }

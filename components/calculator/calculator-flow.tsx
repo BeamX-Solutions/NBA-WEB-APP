@@ -1,191 +1,110 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { useRef, useState } from "react";
 import { InvoiceFlow, TermsCard } from "@/components/calculator/preview-flow";
-import { FormNotice } from "@/components/ui/form-notice";
-import { CheckIcon, SearchIcon } from "@/components/ui/icons";
+import { Button } from "@/components/mobile/button";
+import { Card } from "@/components/mobile/card";
+import { SelectField, TextField } from "@/components/mobile/field";
+import { Icon } from "@/components/mobile/icon";
+import { Screen, SectionTitle } from "@/components/mobile/screen";
+import { Notice } from "@/components/mobile/states";
 import type { CalculatorContext } from "@/lib/calculator/types";
-import {
-  calculateLegalFee,
-  DOCUMENT_TYPES,
-  formatNaira,
-  parseNairaToKobo,
-  type DocumentType,
-  type FeeBreakdown,
-} from "@/lib/fees/legal-fees";
+import { calculateLegalFee, DOCUMENT_TYPES, FeeCalculationError, formatNaira, groupNairaInput, parseNairaToKobo, type DocumentType, type FeeBreakdown as Breakdown } from "@/lib/fees/legal-fees";
+import { greetingFor } from "@/lib/names";
 
-const fieldLabelClass = "mb-[10px] block text-[13px] font-bold";
-const fieldErrorClass = "mt-[6px] text-xs text-nba-destructive";
-const focusClass = "focus-visible:outline-[3px] focus-visible:outline-nba-focus focus-visible:outline-offset-2";
-const submitClass = "reference-primary min-h-[51px] rounded-[9px] bg-nba-primary text-[15px] font-semibold shadow-none hover:bg-nba-primary-container";
-const navItemClass = "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[8px] border-0 text-[11px] font-semibold max-[375px]:text-[10px]";
+const ORDER_SHORT_NAME = "Legal Practitioners (Remuneration) Order, 2023";
+const documentOptions = DOCUMENT_TYPES.map((document) => ({ value: document.id, label: document.label }));
 
-function DocumentIcon({ size = 20 }: { size?: number }) {
-  return <svg aria-hidden="true" fill="none" height={size} viewBox="0 0 24 24" width={size}><path d="M6 2.8h8l4.5 4.5V21H6a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="currentColor"/><path d="M14 3v5h4.5M8 12h7M8 16h7" stroke="#fff" strokeLinecap="round" strokeWidth="1.6"/></svg>;
+type Calculation = { document: DocumentType; amountKobo: bigint; fee: Breakdown };
+
+function Row({ label, value, labelClass, valueClass }: { label: string; value: string; labelClass: string; valueClass: string }) {
+  return <div className="flex items-start justify-between gap-3 py-1"><span className={`flex-1 ${labelClass}`}>{label}</span><span className={valueClass}>{value}</span></div>;
 }
 
-function ReceiptIcon({ size = 28 }: { size?: number }) {
-  return <svg aria-hidden="true" fill="none" height={size} viewBox="0 0 24 24" width={size}><path d="M5 2.5 7 4l2-1.5L11 4l2-1.5L15 4l2-1.5L19 4v17l-2-1.5L15 21l-2-1.5L11 21l-2-1.5L7 21l-2-1.5v-17Z" fill="currentColor"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#fff" strokeLinecap="round" strokeWidth="1.5"/></svg>;
-}
-
-function PersonIcon() {
-  return <svg aria-hidden="true" fill="currentColor" height="22" viewBox="0 0 24 24" width="22"><circle cx="12" cy="7.5" r="4"/><path d="M3.5 21c.3-4.3 3.5-7 8.5-7s8.2 2.7 8.5 7H3.5Z"/></svg>;
-}
-
-function CalculatorIcon() {
-  return <svg aria-hidden="true" fill="none" height="22" viewBox="0 0 24 24" width="22"><rect x="3" y="2" width="18" height="20" rx="2" fill="currentColor"/><path d="M7 7h6m-3-3v6m6-2 3-3m-3 0 3 3M7 16h6m-3-3v6m6-2h3" stroke="#fff" strokeLinecap="round" strokeWidth="1.5"/></svg>;
-}
-
-function CertificateIcon() {
-  return <svg aria-hidden="true" fill="currentColor" height="22" viewBox="0 0 24 24" width="22"><path d="m12 1.5 2.7 2 3.3-.3 1.2 3 3 1.2-.3 3.3 2 2.8-2 2.7.3 3.3-3 1.2-1.2 3-3.3-.3-2.7 2-2.7-2-3.3.3-1.2-3-3-1.2.3-3.3-2-2.7 2-2.8-.3-3.3 3-1.2 1.2-3 3.3.3L12 1.5Z"/><path d="m7.5 12.2 3 3 6-6" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"/></svg>;
-}
-
-function CloseIcon() {
-  return <svg aria-hidden="true" fill="none" height="22" viewBox="0 0 24 24" width="22"><path d="M5 5 19 19M19 5 5 19" stroke="currentColor" strokeLinecap="round" strokeWidth="2"/></svg>;
-}
-
-function ChevronIcon() {
-  return <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20"><path d="m5 9 7 7 7-7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>;
-}
-
-function Modal({ children, labelId, onClose, sheet = false }: { children: ReactNode; labelId: string; onClose: () => void; sheet?: boolean }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-
-  useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    panelRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCloseRef.current();
-      }
-      if (event.key !== "Tab" || !panelRef.current) return;
-      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), a[href]"));
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
-  }, []);
-
-  return <div className="fixed inset-0 z-50 grid place-items-center"><button aria-label="Close dialog" className="absolute inset-0 h-full w-full cursor-default border-0 bg-[rgba(20,34,31,.46)]" onClick={onClose} tabIndex={-1} type="button"/><div aria-labelledby={labelId} aria-modal="true" className={`relative max-h-[calc(100dvh-32px)] overflow-y-auto bg-white shadow-[0_16px_60px_rgba(0,0,0,.17)] ${sheet ? "w-full max-w-[600px] self-end rounded-t-[20px] px-4 pt-0 pb-[max(12px,env(safe-area-inset-bottom))] min-[800px]:max-h-[75dvh] min-[800px]:self-center min-[800px]:rounded-[14px]" : "w-[min(420px,calc(100%-32px))] rounded-[14px] p-5"}`} ref={panelRef} role="dialog">{children}</div></div>;
-}
-
-function DocumentPicker({ selectedId, onClose, onSelect }: { selectedId: string; onClose: () => void; onSelect: (document: DocumentType) => void }) {
-  const [query, setQuery] = useState("");
-  const matches = DOCUMENT_TYPES.filter((document) => document.label.toLowerCase().includes(query.trim().toLowerCase()));
-
-  return <Modal labelId="document-picker-title" onClose={onClose} sheet><div className="mx-auto mt-[7px] mb-[15px] h-1 w-10 rounded-[9px] bg-[#e2e4e4]"/><div className="mb-4 flex items-center justify-between gap-3"><h2 className="m-0 text-[18px] leading-[1.3]" id="document-picker-title">Document / Transaction Type</h2><button aria-label="Close document picker" className={`grid size-[30px] shrink-0 place-items-center border-0 bg-transparent text-[#64707e] ${focusClass}`} onClick={onClose} type="button"><CloseIcon/></button></div><div className="flex h-[50px] items-center gap-[5px] rounded-nba-medium border border-[#cdd1d2] px-[14px] text-[#68727e] focus-within:border-[#8c969b] focus-within:shadow-[0_0_0_2px_rgba(106,117,123,.16)]"><SearchIcon size={19}/><label className="sr-only" htmlFor="document-search">Search document types</label><input autoComplete="off" className="h-full w-full border-0 bg-transparent text-[15px] text-[#272b2e] outline-none placeholder:text-[#8a939d]" data-autofocus id="document-search" onChange={(event) => setQuery(event.target.value)} placeholder="Search" type="search" value={query}/></div><div aria-label="Document types" className="mt-[2px] max-h-[calc(75dvh-112px)] overflow-y-auto min-[800px]:max-h-[calc(75dvh-165px)]" role="group">{matches.length ? matches.map((document) => <button aria-pressed={selectedId === document.id} className={`flex min-h-11 w-full items-center justify-between gap-3 border-0 border-b border-[#e5e7e7] bg-white py-[9px] text-left text-base last:border-b-0 ${focusClass} ${selectedId === document.id ? "font-bold text-nba-primary" : "text-[#262b2d]"}`} key={document.id} onClick={() => onSelect(document)} type="button"><span>{document.label}</span>{selectedId === document.id ? <CheckIcon size={22}/> : null}</button>) : <p className="py-5 text-sm text-[#6c727c]">No document types match “{query}”.</p>}</div></Modal>;
-}
-
-function ResultCard({ document, result, onInvoice }: { document: DocumentType | null; result: FeeBreakdown | null; onInvoice: () => void }) {
-  return <Card as="section" className="min-w-0 overflow-hidden rounded-nba-large border-[#e0e2e2] bg-white" padding="none">
-    <div className="border-b border-[#e1e4e4] bg-[#f1f4f1] px-4 pt-[18px] pb-[15px] max-[375px]:px-[14px]"><h2 className="mb-[5px] text-[13px] font-bold leading-[1.3] tracking-[.035em]">PRESCRIBED MINIMUM FEE</h2><p className="text-xs leading-[1.45] text-[#6c727c]">Per the Legal Practitioners (Remuneration) Order, 2023</p></div>
-    {document && result ? <div aria-live="polite" className="px-4 pt-[18px] pb-[21px] max-[375px]:px-[14px]"><p className="mb-px text-xs text-[#6c727c]">{document.id === "deed-of-conveyance" ? "Purchaser's practitioner" : result.primaryRole}</p><strong className="block font-serif text-[33px] leading-[1.2] text-nba-primary">{formatNaira(result.primaryFeeKobo)}</strong><p className="mt-px mb-[11px] text-xs text-[#6c727c]">{document.description.split(" - ")[0]} - {document.label}</p><div className="border-y border-[#e3e5e5] py-[7px]">{result.lines.map((line) => <div className="flex min-h-[39px] items-center justify-between gap-2" key={line.label}><span className="text-[13px] text-[#6c727c]">{line.label}</span><strong className="shrink-0 text-xs text-[#292d31]">{formatNaira(line.amountKobo)}</strong></div>)}</div><div className="my-[13px] mb-[15px] grid gap-1 rounded-nba-medium bg-nba-surface-container p-3"><span className="text-xs text-[#6c727c]">{document.id === "deed-of-conveyance" ? "Vendor's practitioner (half rate)" : result.counterpartyRole}</span><strong className="text-[17px]">{formatNaira(result.counterpartyFeeKobo)}</strong></div><div className="mb-[11px] flex items-center justify-between gap-[10px] text-sm"><span className="text-[#6c727c]">Payable to NBA branch</span><strong className="text-[13px]">{formatNaira(result.branchLevyKobo)}</strong></div><div className="mb-[11px] flex items-center justify-between gap-[10px] text-sm font-bold"><span>Total</span><strong className="text-sm text-nba-primary">{formatNaira(result.totalKobo)}</strong></div><p className="mb-[15px] text-xs leading-[1.4] text-[#6c727c]">This is the prescribed minimum, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor&apos;s Consent. Charging below scale requires an application to the Legal Practitioners&apos; Remuneration Committee.</p><Button className={submitClass} fullWidth onClick={onInvoice}>Generate Invoice</Button><p className="mt-[9px] text-center text-xs leading-[1.35] text-[#6c727c]">Creates a reference to quote when paying your branch. Calculating is free; a subscription is required to generate an invoice.</p></div> : <div className="grid min-h-[175px] justify-items-center px-[22px] pt-[38px] pb-5 text-center text-[#c9cece]"><ReceiptIcon size={38}/><p className="mt-[14px] max-w-[330px] text-[15px] leading-[1.45] text-[#6c727c]">Enter transaction details and calculate to see the fee breakdown.</p></div>}
-  </Card>;
-}
-
-export function CalculatorFlow({ context }: { context: CalculatorContext }) {
-  const [document, setDocument] = useState<DocumentType | null>(null);
-  const [amount, setAmount] = useState("");
-  const [poaBasis, setPoaBasis] = useState<"property-transfer" | "other" | "">("");
-  const [result, setResult] = useState<FeeBreakdown | null>(null);
-  const [calculatedAmountKobo, setCalculatedAmountKobo] = useState<bigint | null>(null);
-  const [showInvoice, setShowInvoice] = useState(false);
-  const [error, setError] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const documentTriggerRef = useRef<HTMLButtonElement>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
-
-  function selectDocument(next: DocumentType) {
-    setDocument(next);
-    setPoaBasis("");
-    setResult(null);
-    setCalculatedAmountKobo(null);
-    setError("");
-    setPickerOpen(false);
-  }
-
-  function updateAmount(value: string) {
-    const raw = value.replaceAll(",", "").replace(/^₦\s*/, "");
-    if (!/^\d*(?:\.\d{0,2})?$/.test(raw)) return;
-    setAmount(raw);
-    setResult(null);
-    setCalculatedAmountKobo(null);
-    setError("");
-  }
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!document) {
-      setError("Select a document or transaction type.");
-      documentTriggerRef.current?.focus();
-      return;
-    }
-    if (document.requiresPropertyTransfer && poaBasis !== "property-transfer") {
-      setError(poaBasis === "other" ? "This authority alone has no automatic Scale 4A percentage. Assess the underlying service under the applicable Order scale." : "Confirm that this instrument forms part of a property assignment or conveyance.");
-      return;
-    }
-    const parsed = parseNairaToKobo(amount);
-    if (parsed === null) {
-      setError("Enter an amount above ₦0 and no more than ₦1 trillion.");
-      globalThis.document.getElementById("calculator-amount")?.focus();
-      return;
-    }
-    setResult(calculateLegalFee(document.category, parsed));
-    setCalculatedAmountKobo(parsed);
-    setError("");
-    requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
-
-  const amountError = Boolean(error && document && (!document.requiresPropertyTransfer || poaBasis === "property-transfer"));
-  const amountLabel = document?.category === "mortgage" ? "Mortgage value (₦)" : document?.category === "tenancy" ? "Annual rental value (₦)" : document?.requiresPropertyTransfer || document && ["deed-of-gift", "deed-of-surrender", "deed-of-exchange"].includes(document.id) ? "Property value (₦)" : document ? "Consideration / purchase price (₦)" : "Amount (₦)";
-
-  return <div className="reference-calculator min-h-screen bg-[#f7f7f7] text-[#202220]">
-    <header className="sticky top-0 z-30 flex h-[64px] items-center justify-between border-b border-[#e1e4e1] bg-[#f7f7f7] px-4 py-3 min-[800px]:h-[88px] min-[800px]:px-[max(32px,calc((100vw-1080px)/2))] min-[800px]:py-4">
-      <Link aria-label="NBA Legal Fees home" className={focusClass} href="/"><Image alt="NBA Anaocha Branch" className="size-[35px] object-contain" height={35} src="/nba-seal.png" width={35}/></Link>
-      <Link aria-label="Profile" className={`grid size-10 place-items-center rounded-full border-0 bg-[#f8f9f9] text-[#66717e] ${focusClass}`} href="/profile"><PersonIcon/></Link>
-    </header>
-    {showInvoice && document && result && calculatedAmountKobo !== null ? <main className="mx-auto max-w-[760px] px-4 py-6 pb-[calc(40px+env(safe-area-inset-bottom))] min-[800px]:px-7 min-[800px]:py-10"><InvoiceFlow calculation={{ document, amountKobo: calculatedAmountKobo, fee: result }} context={context} onBack={() => setShowInvoice(false)} poaBasis={poaBasis}/></main> : <main className="mx-auto max-w-[1080px] px-4 pt-[18px] pb-[calc(110px+env(safe-area-inset-bottom))] max-[375px]:px-3 min-[800px]:px-7 min-[800px]:pt-[30px] min-[800px]:pb-[115px]">
-      <div className="mb-[19px] min-[800px]:mb-6"><p className="mb-[3px] text-sm leading-normal text-[#6c727c]">Good evening,</p><h1 className="font-serif text-[26px] font-bold leading-[1.22] min-[800px]:text-[33px]">{context.firstName}</h1></div>
-      {context.loadWarning ? <FormNotice className="mb-4" tone="error">{context.loadWarning}</FormNotice> : null}
-      <div className="grid gap-4 min-[800px]:grid-cols-2 min-[800px]:items-start min-[800px]:gap-6">
-        <Card as="section" className="reference-details min-w-0 overflow-hidden rounded-nba-large border-[#e0e2e2] bg-white px-4 pt-[18px] pb-4 max-[375px]:px-[14px]" padding="none">
-          <div className="mb-[14px] flex items-center gap-[9px] text-nba-primary"><DocumentIcon/><h2 className="font-serif text-[17px] font-bold leading-[1.3]">Transaction Details</h2></div>
-          <form noValidate onSubmit={submit}>
-            <div className="mb-[18px]"><label className={fieldLabelClass} id="document-label">Document / Transaction Type</label><button aria-describedby={`${document ? "document-hint " : ""}${error && !document ? "document-error" : ""}`.trim() || undefined} aria-expanded={pickerOpen} aria-haspopup="dialog" aria-labelledby="document-label document-value" className={`flex min-h-[50px] w-full items-center justify-between gap-3 rounded-[9px] border bg-white px-[13px] text-left text-base ${focusClass} ${error && !document ? "border-nba-destructive" : "border-[#cdd1d2]"} ${document ? "text-[#272b2e]" : "text-[#8b929d]"}`} onClick={() => setPickerOpen(true)} ref={documentTriggerRef} type="button"><span id="document-value">{document?.label ?? "Select Document Type"}</span><span className="shrink-0 text-[#677381]"><ChevronIcon/></span></button>{document ? <p className="mt-[5px] text-xs text-[#68727e]" id="document-hint">{document.description}</p> : null}{error && !document ? <p className={fieldErrorClass} id="document-error">{error}</p> : null}</div>
-            {document?.requiresPropertyTransfer ? <fieldset className="mb-[18px] rounded-[9px] border border-[#cdd1d2] p-3"><legend className="px-1 text-[13px] font-bold">Underlying transaction</legend><label className="mb-2 flex items-start gap-2 text-[13px]"><input checked={poaBasis === "property-transfer"} name="poa-basis" onChange={() => { setPoaBasis("property-transfer"); setError(""); setResult(null); }} type="radio"/>Property assignment or conveyance</label><label className="flex items-start gap-2 text-[13px]"><input checked={poaBasis === "other"} name="poa-basis" onChange={() => { setPoaBasis("other"); setError(""); setResult(null); }} type="radio"/>Authority only or another service</label><p className="mt-2 text-xs text-[#68727e]">Scale 4A applies only if the underlying transaction is a property transfer.</p>{error && poaBasis !== "property-transfer" ? <p className={fieldErrorClass} role="alert">{error}</p> : null}</fieldset> : null}
-            <div className="mb-[17px]"><label className={fieldLabelClass} htmlFor="calculator-amount">{amountLabel}</label><div className={`flex min-h-[50px] w-full items-center rounded-[9px] border bg-white pl-[13px] text-base focus-within:border-[#8c969b] focus-within:shadow-[0_0_0_2px_rgba(106,117,123,.16)] ${amountError ? "border-nba-destructive focus-within:border-nba-destructive focus-within:shadow-[0_0_0_2px_rgba(185,28,28,.12)]" : "border-[#cdd1d2]"}`}><span aria-hidden="true" className="mr-[5px] font-bold">₦</span><input aria-describedby={amountError ? "amount-error" : undefined} aria-invalid={amountError || undefined} autoComplete="off" className="h-12 min-w-0 w-full border-0 bg-transparent text-base text-[#262a2d] outline-none placeholder:text-[#929aa4]" id="calculator-amount" inputMode="decimal" onBlur={() => { const parsed = parseNairaToKobo(amount); if (parsed !== null) setAmount(formatNaira(parsed).slice(1)); }} onChange={(event) => updateAmount(event.target.value)} placeholder="0.00" type="text" value={amount}/></div>{amountError ? <p className={fieldErrorClass} id="amount-error">{error}</p> : null}</div>
-            <Button className={submitClass} fullWidth type="submit">Calculate Fee</Button>
-          </form>
-        </Card>
-        <div className="scroll-mt-[76px] min-[800px]:scroll-mt-[100px]" ref={resultRef}><ResultCard document={document} onInvoice={() => { setShowInvoice(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} result={result}/>{document && result && calculatedAmountKobo !== null ? <TermsCard calculation={{ document, amountKobo: calculatedAmountKobo, fee: result }} context={context} key={`${document.id}:${calculatedAmountKobo}`}/> : null}</div>
-      </div>
-      <p className="mt-4 text-xs text-[#6c727c]">{context.branch?.name ?? "Branch unavailable"} · {context.subscription?.isCurrent ? `${context.subscription.plan} subscription active` : "No active subscription"}</p>
-    </main>}
-    {!showInvoice ? <nav aria-label="Practitioner navigation" className="fixed right-0 bottom-0 left-0 z-20 grid h-[calc(70px+env(safe-area-inset-bottom))] grid-cols-4 gap-1 border-t border-[#eef0ef] bg-white p-[6px] pb-[calc(6px+env(safe-area-inset-bottom))] min-[800px]:mx-auto min-[800px]:h-[72px] min-[800px]:w-[430px] min-[800px]:rounded-t-nba-large min-[800px]:border min-[800px]:border-[#e1e5e3] min-[800px]:shadow-[0_-3px_20px_rgba(0,0,0,.05)]">
-      <Link aria-current="page" className={`${navItemClass} ${focusClass} bg-[#fac542] text-nba-primary`} href="/"><CalculatorIcon/><span>Calculator</span></Link>
-      <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/transactions"><ReceiptIcon size={22}/><span>Transactions</span></Link>
-      <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/certificates"><CertificateIcon/><span>Certificates</span></Link>
-      <Link className={`${navItemClass} ${focusClass} bg-transparent text-[#65707e]`} href="/profile"><PersonIcon/><span>Profile</span></Link>
-    </nav> : null}
-    {pickerOpen ? <DocumentPicker onClose={() => setPickerOpen(false)} onSelect={selectDocument} selectedId={document?.id ?? ""}/> : null}
+/** mobile FeeBreakdown: the figure, the working, the half rate, and the practitioner's side of it. */
+function FeeBreakdown({ calculation, onInvoice }: { calculation: Calculation; onInvoice: () => void }) {
+  const { document, fee } = calculation;
+  return <div aria-live="polite">
+    <p className="text-caption text-text-muted">{document.fullRateParty}</p>
+    <strong className="block font-heading text-display leading-tight font-bold text-primary">{formatNaira(fee.professionalFeeKobo)}</strong>
+    <p className="mt-1 text-caption text-text-muted">Scale {fee.scale} - {document.label}</p>
+    <div className="my-3 h-px bg-border"/>
+    {fee.lines.map((line) => <Row key={line.label} label={line.label} labelClass="text-label text-text-muted" value={formatNaira(line.amountKobo)} valueClass="text-label font-medium text-text"/>)}
+    <div className="my-3 h-px bg-border"/>
+    {fee.halfRateFeeKobo !== null && document.halfRateParty ? <div className="mb-3 rounded-input bg-surface-muted p-3"><p className="text-caption text-text-muted">{document.halfRateParty} (half rate)</p><p className="text-title font-semibold text-text">{formatNaira(fee.halfRateFeeKobo)}</p></div> : null}
+    <Row label="Less NBA branch fee" labelClass="text-body text-text-muted" value={formatNaira(fee.branchFeeKobo)} valueClass="text-body font-semibold text-text"/>
+    <Row label="Net to you" labelClass="text-body-lg font-bold text-text" value={formatNaira(fee.netFeeKobo)} valueClass="text-body-lg font-bold text-primary"/>
+    <p className="mt-4 text-caption leading-[17px] text-text-muted">This is the prescribed minimum, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor&apos;s Consent. Charging below scale requires an application to the Legal Practitioners&apos; Remuneration Committee.</p>
+    <div className="mt-4"><Button onClick={onInvoice}>Generate Invoice</Button></div>
+    <p className="mt-2 text-center text-caption leading-[17px] text-text-muted">Creates the invoice your client pays into the branch account. Calculating is free; a subscription is required to generate an invoice.</p>
   </div>;
+}
+
+/** mobile (tabs)/index. From 800px the form and the result sit side by side. */
+export function CalculatorFlow({ context }: { context: CalculatorContext }) {
+  const [documentId, setDocumentId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [errors, setErrors] = useState<{ documentType?: string; amount?: string }>({});
+  const [calculationError, setCalculationError] = useState<string | null>(null);
+  const [calculation, setCalculation] = useState<Calculation | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const document = DOCUMENT_TYPES.find((item) => item.id === documentId) ?? null;
+  const discretionary = document?.scale === "discretionary";
+
+  function reset() {
+    setCalculation(null);
+    setCalculationError(null);
+  }
+
+  function calculate() {
+    const nextErrors: typeof errors = {};
+    if (!document) nextErrors.documentType = "Select the document type.";
+    const amountKobo = parseNairaToKobo(amount);
+    if (!discretionary && amountKobo === null) nextErrors.amount = "Enter the amount, for example 45,000,000.";
+    setErrors(nextErrors);
+    setCalculationError(null);
+    if (Object.keys(nextErrors).length > 0 || !document) { setCalculation(null); return; }
+    try {
+      setCalculation({ document, amountKobo: amountKobo ?? 0n, fee: calculateLegalFee(document, amountKobo ?? 0n) });
+    } catch (error) {
+      // The engine refuses to guess; for Power of Attorney the reason is the answer.
+      setCalculation(null);
+      setCalculationError(error instanceof FeeCalculationError ? error.message : "The fee could not be calculated. Please try again.");
+    }
+    requestAnimationFrame(() => { if (window.innerWidth < 800) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); });
+  }
+
+  if (showInvoice && calculation) {
+    return <Screen><InvoiceFlow calculation={calculation} context={context} onBack={() => setShowInvoice(false)}/></Screen>;
+  }
+
+  return <Screen wide>
+    <div className="mb-4">
+      <p className="text-body text-text-muted" suppressHydrationWarning>{greetingFor(new Date().getHours())},</p>
+      <h1 className="m-0 font-heading text-heading font-bold text-text">{context.firstName}</h1>
+    </div>
+    {context.loadWarning ? <Notice className="mb-4" tone="warning">{context.loadWarning}</Notice> : null}
+    <div className="grid gap-4 min-[800px]:grid-cols-2 min-[800px]:items-start">
+      <Card>
+        <SectionTitle icon="description">Transaction Details</SectionTitle>
+        <form noValidate onSubmit={(event) => { event.preventDefault(); calculate(); }}>
+          <SelectField error={errors.documentType} hint={document ? `Scale ${document.scale} - ${document.basisLabel}.` : undefined} id="calculator-document" label="Document / Transaction Type" onChange={(value) => { setDocumentId(value); setErrors((current) => ({ ...current, documentType: undefined })); reset(); }} options={documentOptions} placeholder="Select Document Type" value={documentId}/>
+          {discretionary ? null : <TextField error={errors.amount} hint={document?.scale === "4C" ? "Enter one year of rent, not the total over the term." : undefined} id="calculator-amount" inputMode="decimal" label={`${document?.basisLabel ?? "Amount"} (₦)`} onChange={(event) => { setAmount(groupNairaInput(event.target.value)); setErrors((current) => ({ ...current, amount: undefined })); reset(); }} placeholder="0.00" prefix="₦" value={amount}/>}
+          <Button type="submit">Calculate Fee</Button>
+        </form>
+      </Card>
+      <div className="grid gap-4 scroll-mt-20" ref={resultRef}>
+        <Card className="overflow-hidden p-0!">
+          <div className="border-b border-border bg-surface-muted p-4"><h2 className="m-0 text-label font-bold tracking-[0.5px] text-text">PRESCRIBED MINIMUM FEE</h2><p className="mt-1 text-caption text-text-muted">Per the {ORDER_SHORT_NAME}</p></div>
+          <div className="p-4">
+            {calculationError ? <div className="flex flex-col items-center gap-3 py-4 text-center"><Icon color="var(--color-accent-text)" name="info-outline" size={32}/><p className="text-body leading-[21px] text-text">{calculationError}</p></div>
+              : calculation ? <FeeBreakdown calculation={calculation} onInvoice={() => { setShowInvoice(true); window.scrollTo({ top: 0 }); }}/>
+              : <div className="flex flex-col items-center gap-3 py-6 text-center"><Icon color="var(--color-border-strong)" name="receipt-long" size={44}/><p className="text-body leading-[21px] text-text-muted">Enter transaction details and calculate to see the fee breakdown.</p></div>}
+          </div>
+        </Card>
+        {calculation ? <TermsCard calculation={calculation} context={context} key={`${calculation.document.id}:${calculation.amountKobo}`}/> : null}
+      </div>
+    </div>
+  </Screen>;
 }

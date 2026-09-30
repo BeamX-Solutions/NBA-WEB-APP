@@ -1,19 +1,18 @@
 import { notFound } from "next/navigation";
+import { AppShell } from "@/components/mobile/app-shell";
+import { ButtonLink } from "@/components/mobile/button";
+import { Screen } from "@/components/mobile/screen";
+import { ErrorState } from "@/components/mobile/states";
 import { TransactionDetail } from "@/components/transactions/transaction-detail";
-import { TransactionShell } from "@/components/transactions/transaction-shell";
-import { FormNotice } from "@/components/ui/form-notice";
 import { isUuid } from "@/lib/calculator/contracts";
 import { loadTransactions } from "@/lib/transactions/live-transaction";
-import { findSampleTransaction } from "@/lib/transactions/sample-transactions";
 
 export default async function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const sample = findSampleTransaction(id);
-  if (sample) return <TransactionDetail transaction={sample}/>;
   if (!isUuid(id)) notFound();
   const result = await loadTransactions(id);
-  if (result.error) return <TransactionShell><main className="mx-auto max-w-[850px] p-4"><FormNotice tone="error">{result.error}</FormNotice></main></TransactionShell>;
+  if (result.error) return <AppShell><Screen><ErrorState action={<ButtonLink href="/transactions" variant="outline">Back to Transactions</ButtonLink>} body={result.error} title="This transaction could not be loaded"/></Screen></AppShell>;
   const transaction = result.transactions[0];
   if (!transaction) notFound();
-  return <TransactionDetail transaction={transaction} live/>;
+  return <AppShell><TransactionDetail transaction={transaction}/></AppShell>;
 }

@@ -1,51 +1,88 @@
-/** Scale 4: Legal Practitioners Remuneration (For Business, Legal Service and Representation) Order, 2023.
- * Source: https://blog.nigerianbar.org.ng/wp-content/uploads/2025/03/Legal-Practitioners-Renumeration-Order-2023.pdf
- * This pure module must also be used to verify any future server-side transaction creation.
+/** Scale 4: Legal Practitioners (Remuneration for Business, Legal Services and Representation) Order, 2023.
+ * Ported from the practitioner mobile app (mobile/lib/fees), which is the source of truth, so both
+ * clients quote the same figure for the same transaction. Bands are marginal and summed exactly in
+ * kobo, then rounded once, half up. This pure module also verifies server-side transaction creation.
  */
 
-export type FeeCategory = "conveyancing" | "mortgage" | "tenancy";
+export type ScaleCode = "4A" | "4B" | "4C";
 
 export type DocumentType = {
   id: string;
   label: string;
-  category: FeeCategory;
+  scale: ScaleCode | "discretionary";
   description: string;
-  requiresPropertyTransfer?: boolean;
+  basisLabel: string;
+  fullRateParty: string;
+  halfRateParty: string | null;
 };
 
 export const DOCUMENT_TYPES: readonly DocumentType[] = [
-  { id: "deed-of-assignment", label: "Deed of Assignment", category: "conveyancing", description: "Scale 4A - Consideration / purchase price." },
-  { id: "deed-of-conveyance", label: "Deed of Conveyance", category: "conveyancing", description: "Scale 4A - Consideration / purchase price." },
-  { id: "deed-of-gift", label: "Deed of Gift", category: "conveyancing", description: "Scale 4A - Property value." },
-  { id: "contract-of-sale", label: "Contract of Sale", category: "conveyancing", description: "Scale 4A - Consideration / purchase price." },
-  { id: "deed-of-surrender", label: "Deed of Surrender", category: "conveyancing", description: "Scale 4A - Property value." },
-  { id: "deed-of-exchange", label: "Deed of Exchange", category: "conveyancing", description: "Scale 4A - Property value." },
-  { id: "mortgage-deed", label: "Mortgage Deed", category: "mortgage", description: "Scale 4A - Mortgage value." },
-  { id: "mortgage-release", label: "Deed of Release / Discharge of Mortgage", category: "mortgage", description: "Scale 4A - Mortgage value." },
-  { id: "tenancy-agreement", label: "Tenancy Agreement", category: "tenancy", description: "Scale 4B - Annual rental value." },
-  { id: "deed-of-lease", label: "Deed of Lease", category: "tenancy", description: "Scale 4B - Annual rental value." },
-  { id: "deed-of-sub-lease", label: "Deed of Sub Lease", category: "tenancy", description: "Scale 4B - Annual rental value." },
-  { id: "irrevocable-power-of-attorney", label: "Irrevocable Power of Attorney", category: "conveyancing", description: "Scale 4A only where the underlying transaction is a property assignment or conveyance.", requiresPropertyTransfer: true },
+  { id: "deed-of-assignment", label: "Deed of Assignment", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Assignee's practitioner", halfRateParty: "Assignor's practitioner" },
+  { id: "deed-of-conveyance", label: "Deed of Conveyance", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner" },
+  { id: "deed-of-gift", label: "Deed of Gift", scale: "4A", description: "Scale 4A - Market value of the property.", basisLabel: "Market value of the property", fullRateParty: "Donee's practitioner", halfRateParty: "Donor's practitioner" },
+  { id: "contract-of-sale", label: "Contract of Sale", scale: "4A", description: "Scale 4A - Purchase price.", basisLabel: "Purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner" },
+  { id: "deed-of-surrender", label: "Deed of Surrender", scale: "4A", description: "Scale 4A - Value of the unexpired lease interest.", basisLabel: "Value of the unexpired lease interest", fullRateParty: "Practitioner assessing the surrendered interest", halfRateParty: null },
+  { id: "deed-of-exchange", label: "Deed of Exchange", scale: "4A", description: "Scale 4A - Higher of the two property values.", basisLabel: "Higher of the two property values", fullRateParty: "Each party's practitioner, charged separately", halfRateParty: null },
+  { id: "mortgage-deed", label: "Mortgage Deed", scale: "4B", description: "Scale 4B - Principal loan amount.", basisLabel: "Principal loan amount", fullRateParty: "Mortgagee's practitioner", halfRateParty: "Mortgagor's practitioner" },
+  { id: "mortgage-release", label: "Deed of Release / Discharge of Mortgage", scale: "4B", description: "Scale 4B - Original loan amount being discharged.", basisLabel: "Original loan amount being discharged", fullRateParty: "Mortgagee's practitioner", halfRateParty: "Mortgagor's practitioner" },
+  { id: "tenancy-agreement", label: "Tenancy Agreement", scale: "4C", description: "Scale 4C - Annual rental value.", basisLabel: "Annual rental value", fullRateParty: "Landlord's practitioner", halfRateParty: "Tenant's practitioner" },
+  { id: "deed-of-lease", label: "Deed of Lease", scale: "4C", description: "Scale 4C - Annual rental value.", basisLabel: "Annual rental value", fullRateParty: "Lessor's practitioner", halfRateParty: "Lessee's practitioner" },
+  { id: "deed-of-sub-lease", label: "Deed of Sub-Lease", scale: "4C", description: "Scale 4C - Annual rental value.", basisLabel: "Annual rental value", fullRateParty: "Sub-Lessor's practitioner", halfRateParty: "Sub-Lessee's practitioner" },
+  { id: "irrevocable-power-of-attorney", label: "Irrevocable Power of Attorney", scale: "discretionary", description: "Not covered by Scale 4. The fee is agreed with the client.", basisLabel: "Not applicable", fullRateParty: "Agreed with the client", halfRateParty: null },
 ] as const;
 
 export const MAX_AMOUNT_KOBO = 1_000_000_000_000_00n;
 
-// Temporary product configuration to reproduce the supplied reference. Replace with the
-// authenticated practitioner's branch payment configuration before transaction creation.
-export const REFERENCE_BRANCH_LEVY_KOBO = 3_000_000n;
+/** Mirrors public.branch_fee_for and mobile BRANCH_SHARE_PERCENTAGE. Change all three together. */
+export const BRANCH_SHARE_PERCENT = 2n;
+
+const MILLION_KOBO = 100_000_000n;
+
+type Band = { minKobo: bigint; maxKobo: bigint | null; percent: bigint };
+
+const SCALE_BANDS: Record<ScaleCode, readonly Band[]> = {
+  // Conveyancing and assignments.
+  "4A": [
+    { minKobo: 0n, maxKobo: 50n * MILLION_KOBO, percent: 10n },
+    { minKobo: 50n * MILLION_KOBO, maxKobo: 100n * MILLION_KOBO, percent: 5n },
+    { minKobo: 100n * MILLION_KOBO, maxKobo: null, percent: 3n },
+  ],
+  // Mortgages. Continuous at ₦100M; the portal's ₦1,000,000 jump there is corrected, as on mobile.
+  "4B": [
+    { minKobo: 0n, maxKobo: 50n * MILLION_KOBO, percent: 4n },
+    { minKobo: 50n * MILLION_KOBO, maxKobo: 100n * MILLION_KOBO, percent: 3n },
+    { minKobo: 100n * MILLION_KOBO, maxKobo: null, percent: 2n },
+  ],
+  // Leases and tenancies, on annual rent. The inert ₦10M boundary is reproduced from mobile, marked SUSPECT there.
+  "4C": [
+    { minKobo: 0n, maxKobo: 5n * MILLION_KOBO, percent: 10n },
+    { minKobo: 5n * MILLION_KOBO, maxKobo: 10n * MILLION_KOBO, percent: 5n },
+    { minKobo: 10n * MILLION_KOBO, maxKobo: null, percent: 5n },
+  ],
+};
 
 export type FeeLine = { label: string; amountKobo: bigint };
 
 export type FeeBreakdown = {
-  category: FeeCategory;
-  primaryRole: string;
-  counterpartyRole: string;
-  primaryFeeKobo: bigint;
-  counterpartyFeeKobo: bigint;
-  branchLevyKobo: bigint;
-  totalKobo: bigint;
+  scale: ScaleCode;
+  /** Prescribed minimum for the full-rate practitioner: what the client pays into the branch account. */
+  professionalFeeKobo: bigint;
+  /** Half the scale fee for the other party's practitioner, or null where there is none. */
+  halfRateFeeKobo: bigint | null;
+  /** What the branch keeps out of the professional fee. */
+  branchFeeKobo: bigint;
+  /** What the branch sends on to the practitioner. */
+  netFeeKobo: bigint;
   lines: FeeLine[];
 };
+
+/** Thrown when no trustworthy figure exists. Never return zero in its place. */
+export class FeeCalculationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FeeCalculationError";
+  }
+}
 
 export function parseNairaToKobo(input: string): bigint | null {
   const normalized = input.replaceAll(",", "").trim();
@@ -57,6 +94,19 @@ export function parseNairaToKobo(input: string): bigint | null {
   return amount;
 }
 
+/**
+ * Groups a currency field's text as it is typed (45000000 reads 45,000,000), as mobile's
+ * groupNairaInput does. Permissive so partial entries survive; the result always parses.
+ */
+export function groupNairaInput(input: string): string {
+  const cleaned = input.replace(/[^\d.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  const whole = firstDot === -1 ? cleaned : cleaned.slice(0, firstDot);
+  const fraction = firstDot === -1 ? null : cleaned.slice(firstDot + 1).replace(/\./g, "").slice(0, 2);
+  const grouped = whole.replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return fraction === null ? grouped : `${grouped}.${fraction}`;
+}
+
 export function formatNaira(amountKobo: bigint, decimals = false): string {
   const whole = amountKobo / 100n;
   const fraction = amountKobo % 100n;
@@ -64,77 +114,49 @@ export function formatNaira(amountKobo: bigint, decimals = false): string {
   return `₦${grouped}${decimals || fraction !== 0n ? `.${fraction.toString().padStart(2, "0")}` : ""}`;
 }
 
-function percentage(amountKobo: bigint, basisPoints: bigint): bigint {
-  return (amountKobo * basisPoints + 5_000n) / 10_000n;
+/** Divides a non-negative value by 100, rounding half up. */
+function roundHundredths(value: bigint): bigint {
+  return (value + 50n) / 100n;
 }
 
-function tier(amount: bigint, cap: bigint): bigint {
-  return amount < cap ? amount : cap;
+export function branchFeeFor(professionalFeeKobo: bigint): bigint {
+  return roundHundredths(professionalFeeKobo * BRANCH_SHARE_PERCENT);
 }
 
-export function calculateLegalFee(
-  category: FeeCategory,
-  amountKobo: bigint,
-  branchLevyKobo = REFERENCE_BRANCH_LEVY_KOBO,
-): FeeBreakdown {
-  if (amountKobo <= 0n || amountKobo > MAX_AMOUNT_KOBO) throw new RangeError("Enter a valid positive amount.");
-  if (branchLevyKobo < 0n) throw new RangeError("Branch levy cannot be negative.");
-
-  let primaryRole: string;
-  let counterpartyRole: string;
-  let lines: FeeLine[];
-
-  if (category === "conveyancing") {
-    primaryRole = "Assignee's practitioner";
-    counterpartyRole = "Assignor's practitioner (half rate)";
-    const first = tier(amountKobo, 5_000_000_000n);
-    const second = tier(amountKobo > first ? amountKobo - first : 0n, 5_000_000_000n);
-    const third = amountKobo > 10_000_000_000n ? amountKobo - 10_000_000_000n : 0n;
-    lines = [
-      { label: "First ₦50,000,000 at 10%", amountKobo: percentage(first, 1_000n) },
-      ...(second > 0n ? [{ label: "Next ₦50,000,000 at 5%", amountKobo: percentage(second, 500n) }] : []),
-      ...(third > 0n ? [{ label: "Above ₦100,000,000 at 3%", amountKobo: percentage(third, 300n) }] : []),
-    ];
-  } else if (category === "mortgage") {
-    primaryRole = "Mortgagee's practitioner";
-    counterpartyRole = "Mortgagor's practitioner (half rate)";
-    // Scale 4A explicitly quotes ₦4.5m for the first ₦100m in the >₦100m
-    // bracket. This differs from the sum of the preceding bracket (₦3.5m).
-    // Preserve the printed rule at the threshold rather than smoothing it.
-    if (amountKobo > 10_000_000_000n) {
-      lines = [
-        { label: "First ₦100,000,000 (Scale 4A)", amountKobo: 450_000_000n },
-        { label: "Above ₦100,000,000 at 2%", amountKobo: percentage(amountKobo - 10_000_000_000n, 200n) },
-      ];
-    } else {
-      const first = tier(amountKobo, 5_000_000_000n);
-      const second = amountKobo > first ? amountKobo - first : 0n;
-      lines = [
-        { label: "First ₦50,000,000 at 4%", amountKobo: percentage(first, 400n) },
-        ...(second > 0n ? [{ label: "Next ₦50,000,000 at 3%", amountKobo: percentage(second, 300n) }] : []),
-      ];
-    }
-  } else {
-    primaryRole = "Lessor's / Landlord's practitioner";
-    counterpartyRole = "Lessee's / Tenant's practitioner (half rate)";
-    const first = tier(amountKobo, 500_000_000n);
-    const remainder = amountKobo > first ? amountKobo - first : 0n;
-    lines = [
-      { label: "First ₦5,000,000 annual rent at 10%", amountKobo: percentage(first, 1_000n) },
-      ...(remainder > 0n ? [{ label: "Remaining annual rent at 5%", amountKobo: percentage(remainder, 500n) }] : []),
-    ];
+function describeBand(band: Band, isFirst: boolean): string {
+  if (isFirst) {
+    return band.maxKobo === null ? `All of the amount at ${band.percent}%` : `First ${formatNaira(band.maxKobo)} at ${band.percent}%`;
   }
+  if (band.maxKobo === null) return `Above ${formatNaira(band.minKobo)} at ${band.percent}%`;
+  return `${formatNaira(band.minKobo)} to ${formatNaira(band.maxKobo)} at ${band.percent}%`;
+}
 
-  const primaryFeeKobo = lines.reduce((sum, line) => sum + line.amountKobo, 0n);
-  const counterpartyFeeKobo = (primaryFeeKobo + 1n) / 2n;
+export function calculateLegalFee(document: DocumentType, amountKobo: bigint): FeeBreakdown {
+  if (document.scale === "discretionary") {
+    throw new FeeCalculationError(
+      `${document.label} is not covered by Scale 4. The fee is agreed with the client under paragraph 2 of the Order, having regard to complexity, time and value.`,
+    );
+  }
+  if (amountKobo <= 0n || amountKobo > MAX_AMOUNT_KOBO) throw new RangeError("Enter a valid positive amount.");
+
+  const lines: FeeLine[] = [];
+  let totalHundredths = 0n;
+  SCALE_BANDS[document.scale].forEach((band, index) => {
+    if (amountKobo <= band.minKobo) return;
+    const upper = band.maxKobo === null || amountKobo < band.maxKobo ? amountKobo : band.maxKobo;
+    const hundredths = (upper - band.minKobo) * band.percent;
+    totalHundredths += hundredths;
+    lines.push({ label: describeBand(band, index === 0), amountKobo: roundHundredths(hundredths) });
+  });
+
+  const professionalFeeKobo = roundHundredths(totalHundredths);
+  const branchFeeKobo = branchFeeFor(professionalFeeKobo);
   return {
-    category,
-    primaryRole,
-    counterpartyRole,
-    primaryFeeKobo,
-    counterpartyFeeKobo,
-    branchLevyKobo,
-    totalKobo: primaryFeeKobo + branchLevyKobo,
+    scale: document.scale,
+    professionalFeeKobo,
+    halfRateFeeKobo: document.halfRateParty === null ? null : (professionalFeeKobo + 1n) / 2n,
+    branchFeeKobo,
+    netFeeKobo: professionalFeeKobo - branchFeeKobo,
     lines,
   };
 }

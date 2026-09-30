@@ -10,9 +10,16 @@ function avatarRemotePatterns(): URL[] {
   }
 }
 
+// The PDF routes read the fonts and seal from public/ with fs, so trace them into those functions.
+const pdfAssets = ["./public/fonts/**/*", "./public/nba-seal.png"];
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: avatarRemotePatterns(),
+  },
+  outputFileTracingIncludes: {
+    "/certificates/[id]/pdf": pdfAssets,
+    "/transactions/[id]/invoice/pdf": pdfAssets,
   },
 };
 

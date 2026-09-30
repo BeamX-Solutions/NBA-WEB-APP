@@ -19,6 +19,8 @@ export type CalculatorContext = {
   branch: CalculatorBranch | null;
   displayName: string;
   firstName: string;
+  /** The branch sends the practitioner's share here; create_transaction refuses an invoice without it. */
+  hasBankDetails: boolean;
   scn: string | null;
   loadWarning: string | null;
   subscription: CalculatorSubscription | null;
@@ -28,7 +30,6 @@ export type InvoiceFieldErrors = {
   amount?: string;
   document?: string;
   parties?: string;
-  poaBasis?: string;
 };
 
 export type CreateInvoiceActionState = {
@@ -39,6 +40,5 @@ export type CreateInvoiceActionState = {
   transaction: {
     id: string;
     invoiceNumber: string;
-    amountPayable: string | null;
   } | null;
 };

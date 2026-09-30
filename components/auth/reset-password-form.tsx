@@ -1,14 +1,19 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { AuthField, AuthSeal, AuthStatus, AuthSwitchLink } from "./auth-ui";
-import { createClient } from "@/lib/supabase/client";
+import { AuthScreen, FormMessage } from "@/components/auth/auth-screen";
+import { Button } from "@/components/mobile/button";
+import { Card } from "@/components/mobile/card";
+import { TextField } from "@/components/mobile/field";
 import { friendlyAuthError } from "@/lib/auth/errors";
 import { validatePassword } from "@/lib/auth/validation";
-import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 type ResetErrors = Partial<Record<"confirmation" | "password", string>>;
 
+/** Web only (mobile resets in the browser); laid out like the mobile Forgot Password card. */
 export function ResetPasswordForm() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -59,5 +64,19 @@ export function ResetPasswordForm() {
     }
   }
 
-  return <main className="auth-page auth-page--login"><section aria-labelledby="reset-title" className="auth-card auth-recovery-card"><div className="auth-login-heading"><AuthSeal large/><h1 id="reset-title">Set New Password</h1><p>Choose a new password for your account.</p></div><form className="auth-form" noValidate onSubmit={submit}><AuthField error={errors.password} id="reset-password" label="New Password"><input aria-describedby={errors.password ? "reset-password-error" : undefined} aria-invalid={Boolean(errors.password)} autoComplete="new-password" className="auth-input" id="reset-password" onChange={(event) => { setPassword(event.target.value); setErrors((current) => ({ ...current, password: undefined })); }} required type="password" value={password}/></AuthField><AuthField error={errors.confirmation} id="reset-confirm" label="Confirm New Password"><input aria-describedby={errors.confirmation ? "reset-confirm-error" : undefined} aria-invalid={Boolean(errors.confirmation)} autoComplete="new-password" className="auth-input" id="reset-confirm" onChange={(event) => { setConfirmation(event.target.value); setErrors((current) => ({ ...current, confirmation: undefined })); }} required type="password" value={confirmation}/></AuthField><button className="auth-submit" disabled={pending || !ready} type="submit">{pending ? "Updating…" : ready ? "Update Password" : "Checking link…"}</button>{message ? <AuthStatus tone="error">{message}</AuthStatus> : null}</form><div className="auth-divider"/><AuthSwitchLink href="/login" prefix="Remember your password?" text="Log In"/></section></main>;
+  return <AuthScreen>
+    <Card>
+      <div className="mb-4 flex flex-col items-center text-center">
+        <h1 className="m-0 text-heading font-bold text-text">Set New Password</h1>
+        <p className="mt-2 text-body leading-[21px] text-text-muted">Choose a new password for your account.</p>
+      </div>
+      <form noValidate onSubmit={submit}>
+        <TextField autoComplete="new-password" error={errors.password} id="reset-password" label="New Password" onChange={(event) => { setPassword(event.target.value); setErrors((current) => ({ ...current, password: undefined })); }} placeholder="At least 8 characters" type="password" value={password}/>
+        <TextField autoComplete="new-password" error={errors.confirmation} id="reset-confirm" label="Confirm New Password" onChange={(event) => { setConfirmation(event.target.value); setErrors((current) => ({ ...current, confirmation: undefined })); }} placeholder="Re-enter the new password" type="password" value={confirmation}/>
+        {message ? <FormMessage tone="error">{message}</FormMessage> : null}
+        <Button disabled={!ready} loading={pending} type="submit">{ready ? "Update Password" : "Checking link…"}</Button>
+      </form>
+      <Link className="mt-4 block text-center text-label font-semibold text-primary" href="/login">Back to Login</Link>
+    </Card>
+  </AuthScreen>;
 }

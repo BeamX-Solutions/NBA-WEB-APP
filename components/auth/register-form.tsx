@@ -1,29 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { AuthField, AuthSeal, AuthStatus, AuthSwitchLink } from "./auth-ui";
-import { BranchPicker } from "./branch-picker";
+import { AuthFooterLink, AuthScreen, FormMessage, Seal } from "@/components/auth/auth-screen";
+import { Button, ButtonLink } from "@/components/mobile/button";
+import { Card } from "@/components/mobile/card";
+import { SelectField, TextField } from "@/components/mobile/field";
+import { ScreenHeading } from "@/components/mobile/screen";
+import { IconCircle } from "@/components/mobile/states";
 import { listSignupBranches, type SignupBranch } from "@/lib/auth/branches";
 import { friendlyAuthError } from "@/lib/auth/errors";
 import { normalizeEmail, validateRegistration, type RegisterField, type RegisterFieldErrors } from "@/lib/auth/validation";
 import { createClient } from "@/lib/supabase/client";
 
+/** mobile (auth)/register, including its "Confirm your email" state. */
 export function RegisterForm() {
   const router = useRouter();
-  const [branch, setBranch] = useState<SignupBranch | null>(null);
+  const [branchCode, setBranchCode] = useState("");
   const [branches, setBranches] = useState<SignupBranch[]>([]);
   const [branchLoading, setBranchLoading] = useState(true);
   const [branchLoadError, setBranchLoadError] = useState(false);
-  const [branchOpen, setBranchOpen] = useState(false);
   const [errors, setErrors] = useState<RegisterFieldErrors>({});
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState("");
-  const [messageTone, setMessageTone] = useState<"error" | "info" | "success">("error");
   const [pending, setPending] = useState(false);
-  const branchTrigger = useRef<HTMLButtonElement>(null);
-  const confirmationInput = useRef<HTMLInputElement>(null);
+  const [awaitingEmail, setAwaitingEmail] = useState<string | null>(null);
 
   const loadBranches = useCallback(() => {
     let active = true;
@@ -46,37 +48,19 @@ export function RegisterForm() {
     setErrors((current) => ({ ...current, [field]: undefined }));
   }
 
-  const closeBranch = useCallback(() => {
-    setBranchOpen(false);
-    requestAnimationFrame(() => branchTrigger.current?.focus());
-  }, []);
-
-  function selectBranch(value: SignupBranch) {
-    setBranch(value);
-    clearError("branch");
-    closeBranch();
-  }
-
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
-
     const form = new FormData(event.currentTarget);
     const fullName = String(form.get("name") ?? "").trim();
     const email = normalizeEmail(String(form.get("email") ?? ""));
     const phone = String(form.get("phone") ?? "").trim();
     const scn = String(form.get("scn") ?? "").trim();
-    const validBranch = Boolean(branch && branches.some((item) => item.id === branch.id && item.branch_code === branch.branch_code));
-    const nextErrors = validateRegistration({ branchSelected: validBranch, confirmation, email, fullName, password, phone, scn });
+    const branch = branches.find((item) => item.branch_code === branchCode);
+    const nextErrors = validateRegistration({ branchSelected: Boolean(branch), confirmation, email, fullName, password, phone, scn });
     setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0 || !branch) return;
 
-    if (Object.keys(nextErrors).length > 0) {
-      if (nextErrors.branch) branchTrigger.current?.focus();
-      else if (nextErrors.confirmation) confirmationInput.current?.focus();
-      return;
-    }
-
-    if (!branch) return;
     setPending(true);
     try {
       const { data, error } = await createClient().auth.signUp({
@@ -88,70 +72,56 @@ export function RegisterForm() {
         },
       });
       if (error) {
-        setMessageTone("error");
         setMessage(friendlyAuthError(error, "register"));
         return;
       }
       setPassword("");
       setConfirmation("");
-      setMessageTone(data.session ? "success" : "info");
-      setMessage(data.session ? "Account created. Opening your dashboard…" : "Check your email for a confirmation link to finish registration.");
       if (data.session) {
         router.replace("/");
         router.refresh();
+        return;
       }
+      setAwaitingEmail(email);
     } catch (error) {
-      setMessageTone("error");
       setMessage(friendlyAuthError(error, "register"));
     } finally {
       setPending(false);
     }
   }
 
-  return (
-    <main className="auth-page auth-page--register">
-      <div className="auth-register-wrap">
-        <div className="auth-register-intro">
-          <AuthSeal />
-          <h1>Create Account</h1>
-          <p>Register as a legal practitioner to access official services and fee calculators.</p>
-        </div>
+  if (awaitingEmail) {
+    return <AuthScreen>
+      <Card className="flex flex-col items-center text-center">
+        <IconCircle icon="mark-email-unread"/>
+        <h1 className="m-0 text-title font-bold text-text">Confirm your email</h1>
+        <p className="mt-3 text-body leading-[22px] text-text">We have sent a confirmation link to {awaitingEmail}. Open it to activate your account, then log in.</p>
+        <p className="mt-3 text-caption text-text-muted">Check your spam folder if it has not arrived within a few minutes.</p>
+        <div className="mt-6 w-full"><ButtonLink href="/login" variant="outline">Go to Log In</ButtonLink></div>
+      </Card>
+    </AuthScreen>;
+  }
 
-        <section aria-label="Create account form" className="auth-card auth-register-card">
-          <form className="auth-form" noValidate onSubmit={submit}>
-            <AuthField error={errors.fullName} id="register-name" label="Full Name (As on Call to Bar Certificate)">
-              <input aria-describedby={errors.fullName ? "register-name-error" : undefined} aria-invalid={Boolean(errors.fullName)} autoComplete="name" className="auth-input" id="register-name" name="name" onChange={() => clearError("fullName")} placeholder="e.g. Jane Doe" type="text" />
-            </AuthField>
-            <AuthField error={errors.email} id="register-email" label="Official Email Address">
-              <input aria-describedby={errors.email ? "register-email-error" : undefined} aria-invalid={Boolean(errors.email)} autoComplete="email" className="auth-input" id="register-email" name="email" onChange={() => clearError("email")} placeholder="jane.doe@example.com" type="email" />
-            </AuthField>
-            <AuthField error={errors.phone} id="register-phone" label="Phone Number">
-              <input aria-describedby={errors.phone ? "register-phone-error" : undefined} aria-invalid={Boolean(errors.phone)} autoComplete="tel" className="auth-input" id="register-phone" name="phone" onChange={() => clearError("phone")} placeholder="+234 800 000 0000" type="tel" />
-            </AuthField>
-            <AuthField error={errors.scn} id="register-scn" label="Supreme Court Number (SCN)">
-              <input aria-describedby={errors.scn ? "register-scn-error" : undefined} aria-invalid={Boolean(errors.scn)} className="auth-input" id="register-scn" name="scn" onChange={() => clearError("scn")} placeholder="SCN-123456" type="text" />
-            </AuthField>
-            <AuthField error={errors.branch} hint="Ask your branch secretariat if you are unsure which to choose." id="register-branch" label="NBA Branch">
-              <button aria-describedby={errors.branch ? "register-branch-error" : undefined} aria-expanded={branchOpen} aria-haspopup="dialog" className={`auth-input auth-branch-trigger ${errors.branch ? "auth-input--invalid" : ""}`} disabled={branchLoading || branchLoadError || branches.length === 0 || pending} id="register-branch" onClick={() => setBranchOpen(true)} ref={branchTrigger} type="button">
-                <span className={branch ? "" : "auth-placeholder"}>{branch?.name || (branchLoading ? "Loading branches…" : "Select your branch")}</span>
-                <svg aria-hidden="true" fill="none" height="20" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="m5 9 7 7 7-7" /></svg>
-              </button>
-              {branchLoadError ? <div className="auth-retry-row"><p className="auth-error" role="alert">Branches could not be loaded.</p><button className="auth-inline-action" onClick={retryBranches} type="button">Try again</button></div> : null}
-              {!branchLoading && !branchLoadError && branches.length === 0 ? <p className="auth-error" role="alert">No branches are available for registration.</p> : null}
-            </AuthField>
-            <AuthField error={errors.password} id="register-password" label="Password">
-              <input aria-describedby={errors.password ? "register-password-error" : undefined} aria-invalid={Boolean(errors.password)} autoComplete="new-password" className="auth-input" id="register-password" name="password" onChange={(event) => { setPassword(event.target.value); clearError("password"); }} placeholder="At least 8 characters" type="password" value={password} />
-            </AuthField>
-            <AuthField error={errors.confirmation} id="register-confirm" label="Confirm Password">
-              <input aria-describedby={errors.confirmation ? "register-confirm-error" : undefined} aria-invalid={Boolean(errors.confirmation)} autoComplete="new-password" className="auth-input" id="register-confirm" name="confirmation" onChange={(event) => { setConfirmation(event.target.value); clearError("confirmation"); }} placeholder="Re-enter your password" ref={confirmationInput} type="password" value={confirmation} />
-            </AuthField>
-            <button className="auth-submit" disabled={pending || branchLoading || branchLoadError || branches.length === 0} type="submit">{pending ? "Creating account…" : "Proceed"}</button>
-            {message ? <AuthStatus tone={messageTone}>{message}</AuthStatus> : null}
-          </form>
-          <AuthSwitchLink href="/login" prefix="Already have an account?" text="Log In" />
-        </section>
-      </div>
-      {branchOpen ? <BranchPicker branches={branches} onClose={closeBranch} onSelect={selectBranch} /> : null}
-    </main>
-  );
+  const branchPlaceholder = branchLoading ? "Loading branches..." : branches.length ? "Select your branch" : "No branches available";
+  const branchError = errors.branch ?? (branchLoadError ? "The list of branches could not be loaded." : !branchLoading && !branches.length ? "No branches are available for registration." : undefined);
+
+  return <AuthScreen centred={false}>
+    <div className="mb-3 flex justify-center"><Seal size={64}/></div>
+    <ScreenHeading subtitle="Register as a legal practitioner to access official services and fee calculators." title="Create Account"/>
+    <Card>
+      <form noValidate onSubmit={submit}>
+        <TextField autoCapitalize="words" autoComplete="name" error={errors.fullName} id="register-name" label="Full Name (As on Call to Bar Certificate)" name="name" onChange={() => clearError("fullName")} placeholder="e.g. Jane Doe"/>
+        <TextField autoComplete="email" error={errors.email} id="register-email" label="Official Email Address" name="email" onChange={() => clearError("email")} placeholder="jane.doe@example.com" type="email"/>
+        <TextField autoComplete="tel" error={errors.phone} id="register-phone" label="Phone Number" name="phone" onChange={() => clearError("phone")} placeholder="+234 800 000 0000" type="tel"/>
+        <TextField autoCapitalize="characters" error={errors.scn} id="register-scn" label="Supreme Court Number (SCN)" name="scn" onChange={() => clearError("scn")} placeholder="SCN-123456"/>
+        <SelectField disabled={branchLoading || branchLoadError || !branches.length || pending} error={branchError} hint="Your branch approves your account before you can use the app. Ask your branch secretariat if you are unsure which to choose." id="register-branch" label="NBA Branch" onChange={(value) => { setBranchCode(value); clearError("branch"); }} options={branches.map((branch) => ({ value: branch.branch_code, label: branch.name }))} placeholder={branchPlaceholder} value={branchCode}/>
+        {branchLoadError ? <div className="mb-4"><Button onClick={retryBranches} variant="outline">Retry loading branches</Button></div> : null}
+        <TextField autoComplete="new-password" error={errors.password} id="register-password" label="Password" onChange={(event) => { setPassword(event.target.value); clearError("password"); }} placeholder="At least 8 characters" type="password" value={password}/>
+        <TextField autoComplete="new-password" error={errors.confirmation} id="register-confirm" label="Confirm Password" onChange={(event) => { setConfirmation(event.target.value); clearError("confirmation"); }} placeholder="Re-enter your password" type="password" value={confirmation}/>
+        {message ? <FormMessage tone="error">{message}</FormMessage> : null}
+        <Button disabled={branchLoading || branchLoadError || !branches.length} loading={pending} type="submit">Proceed</Button>
+      </form>
+      <div className="mt-4"><AuthFooterLink href="/login" prefix="Already have an account?" text="Log In"/></div>
+    </Card>
+  </AuthScreen>;
 }
