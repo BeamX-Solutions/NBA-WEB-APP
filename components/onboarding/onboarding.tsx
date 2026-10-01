@@ -53,24 +53,26 @@ export function Onboarding() {
   const slide = slides[index];
 
   return <div aria-label="Welcome to NBA Legal Fees" aria-modal="true" className="fixed inset-0 z-50 overflow-y-auto bg-background" role="dialog">
-    <div className="mx-auto flex min-h-full max-w-[480px] flex-col" onTouchEnd={onTouchEnd} onTouchStart={(event) => { touchStart.current = event.touches[0].clientX; }}>
-      <div className="relative h-[340px] shrink-0">
-        <Image alt="" className="object-cover" fill priority sizes="480px" src={slide.image}/>
+    <div className="mx-auto flex min-h-full w-full max-w-[480px] flex-col min-[640px]:max-w-[720px] min-[800px]:grid min-[800px]:max-w-[1040px] min-[800px]:grid-cols-2 min-[800px]:items-center min-[800px]:gap-8 min-[800px]:px-6 min-[800px]:py-8" onTouchEnd={onTouchEnd} onTouchStart={(event) => { touchStart.current = event.touches[0].clientX; }}>
+      <div className="relative h-[340px] shrink-0 min-[640px]:h-[420px] min-[800px]:h-[min(640px,calc(100dvh-64px))] min-[800px]:min-h-[420px] min-[800px]:overflow-hidden min-[800px]:rounded-card">
+        <Image alt="" className="object-cover" fill preload sizes="(min-width: 1040px) 480px, (min-width: 800px) calc((100vw - 80px) / 2), (min-width: 720px) 720px, (min-width: 640px) 100vw, (min-width: 480px) 480px, 100vw" src={slide.image}/>
         {/* Softens the foot of the photo into the page, as on mobile. */}
-        <div className="absolute inset-x-0 bottom-0 h-8 rounded-t-[28px] bg-background"/>
+        <div className="absolute inset-x-0 bottom-0 h-8 rounded-t-[28px] bg-background min-[800px]:hidden"/>
         <div className="absolute inset-x-4 top-[max(8px,env(safe-area-inset-top))] flex items-center justify-between">
           <Image alt="Nigerian Bar Association seal" className="size-11 object-contain" height={44} src="/nba-seal.png" width={44}/>
           <button aria-label="Skip onboarding" className="rounded-full border-0 bg-surface px-3 py-[6px] text-label font-semibold text-text" onClick={finish} type="button">Skip</button>
         </div>
       </div>
-      <div aria-live="polite" className="px-6 pt-4 text-center">
-        <h2 className="m-0 font-heading text-heading font-bold text-text">{slide.title}</h2>
-        <p className="mt-3 text-body-lg leading-6 text-text-muted">{slide.body}</p>
-      </div>
-      <div className="mt-auto flex flex-col gap-4 px-6 pt-6 pb-[max(16px,env(safe-area-inset-bottom))]">
-        <div className="flex justify-center gap-2">{slides.map((item, dot) => <button aria-current={dot === index ? "step" : undefined} aria-label={`Slide ${dot + 1} of ${slides.length}`} className={`h-2 rounded-full border-0 p-0 transition-all ${dot === index ? "w-[22px] bg-primary" : "w-2 bg-border-strong"}`} key={item.title} onClick={() => setIndex(dot)} type="button"/>)}</div>
-        <Button onClick={() => (isLast ? finish() : setIndex(index + 1))}>{isLast ? "Get started" : "Next"}</Button>
-        <p className="text-center text-caption text-text-muted">{PRODUCT_NAME} - {ATTRIBUTION}</p>
+      <div className="flex flex-1 flex-col min-[800px]:min-w-0 min-[800px]:py-8">
+        <div aria-live="polite" className="px-6 pt-4 text-center min-[800px]:px-0 min-[800px]:pt-0 min-[800px]:text-left">
+          <h2 className="m-0 font-heading text-heading font-bold text-text">{slide.title}</h2>
+          <p className="mt-3 text-body-lg leading-6 text-text-muted">{slide.body}</p>
+        </div>
+        <div className="mt-auto flex flex-col gap-4 px-6 pt-6 pb-[max(16px,env(safe-area-inset-bottom))] min-[800px]:mt-8 min-[800px]:px-0 min-[800px]:pt-0">
+          <div className="flex justify-center gap-2">{slides.map((item, dot) => <button aria-current={dot === index ? "step" : undefined} aria-label={`Slide ${dot + 1} of ${slides.length}`} className={`h-2 rounded-full border-0 p-0 transition-all ${dot === index ? "w-[22px] bg-primary" : "w-2 bg-border-strong"}`} key={item.title} onClick={() => setIndex(dot)} type="button"/>)}</div>
+          <Button onClick={() => (isLast ? finish() : setIndex(index + 1))}>{isLast ? "Get started" : "Next"}</Button>
+          <p className="text-center text-caption text-text-muted">{PRODUCT_NAME} - {ATTRIBUTION}</p>
+        </div>
       </div>
     </div>
   </div>;
