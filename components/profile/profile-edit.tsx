@@ -11,6 +11,7 @@ import { Notice, type NoticeTone } from "@/components/mobile/states";
 import { ProfileAvatar } from "@/components/profile/avatar";
 import type { PractitionerProfile } from "@/lib/profile/types";
 import { nigerianStates } from "@/lib/profile/validation";
+import { useOnline } from "@/lib/use-online";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const initialState: ProfileActionState = { fieldErrors: {}, message: "", status: "idle" };
@@ -25,6 +26,7 @@ function readAvatarResponse(value: unknown): { message: string; url?: string } {
 /** mobile profile/edit: photo, personal, bank and professional details. */
 export function ProfileEdit({ profile }: { profile: PractitionerProfile }) {
   const router = useRouter();
+  const online = useOnline();
   const [state, formAction, pending] = useActionState(updateProfileAction, initialState);
   const fieldErrors = state.fieldErrors ?? {};
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl);
@@ -72,7 +74,7 @@ export function ProfileEdit({ profile }: { profile: PractitionerProfile }) {
     <Card className="mb-4 flex flex-col items-center text-center">
       <div className="mb-3"><ProfileAvatar size={96} url={previewUrl || avatarUrl}/></div>
       <input accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={changePhoto} ref={inputRef} tabIndex={-1} type="file"/>
-      <div><Button className="w-auto! px-6" loading={uploading} onClick={() => inputRef.current?.click()}>{avatarUrl ? "Change Photo" : "Add Photo"}</Button></div>
+      <div><Button className="w-auto! px-6" disabled={!online} loading={uploading} onClick={() => inputRef.current?.click()}>{avatarUrl ? "Change Photo" : "Add Photo"}</Button></div>
       {photoNotice ? <Notice className="mt-3 w-full text-left" tone={photoNotice.tone}>{photoNotice.message}</Notice> : null}
       <p className="mt-2 text-caption text-text-muted">JPG, PNG or WebP. Max size of 2MB.</p>
     </Card>
@@ -99,7 +101,7 @@ export function ProfileEdit({ profile }: { profile: PractitionerProfile }) {
         <TextField hint="Contact your branch administrator to change your affiliation." id="profile-branch" label="Branch Affiliation" locked readOnly value={profile.branchName}/>
         <SelectField defaultValue={profile.practiceState || profile.branchState || ""} error={fieldErrors.practiceState} hint="Recorded on your profile for branch administration. It does not affect the fee." id="profile-state" label="Practice State" name="practiceState" options={stateOptions} placeholder="Select a State"/>
         {state.message ? <Notice className="mb-4" tone={state.status === "success" ? "success" : "error"}>{state.message}</Notice> : null}
-        <Button loading={pending} type="submit">Save Changes</Button>
+        <Button disabled={!online} loading={pending} type="submit">{online ? "Save Changes" : "Offline: reconnect to save"}</Button>
         <Button className="mt-2 border-border! text-text!" onClick={() => router.push("/profile")} variant="outline">Cancel</Button>
       </Card>
     </form>

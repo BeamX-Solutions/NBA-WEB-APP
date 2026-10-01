@@ -13,6 +13,7 @@ import { Notice } from "@/components/mobile/states";
 import type { CalculatorContext, CreateInvoiceActionState } from "@/lib/calculator/types";
 import { formatNaira, type DocumentType, type FeeBreakdown } from "@/lib/fees/legal-fees";
 import { createTermsPdf, downloadPdf, validateText } from "@/lib/preview/documents";
+import { useOnline } from "@/lib/use-online";
 
 type Calculation = { amountKobo: bigint; document: DocumentType; fee: FeeBreakdown };
 
@@ -74,6 +75,7 @@ function blockFor(context: CalculatorContext): Block | null {
 /** mobile transaction/new: confirm the figures, name the parties, create the invoice. */
 export function InvoiceFlow({ calculation, context, onBack }: { calculation: Calculation; context: CalculatorContext; onBack: () => void }) {
   const router = useRouter();
+  const online = useOnline();
   const submittingRef = useRef(false);
   const [state, formAction, pending] = useActionState(
     async (previous: CreateInvoiceActionState, data: FormData) => {
@@ -95,7 +97,7 @@ export function InvoiceFlow({ calculation, context, onBack }: { calculation: Cal
   }, [createdId, router]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (pending || submittingRef.current || state.requiresReview || block) { event.preventDefault(); return; }
+    if (pending || submittingRef.current || state.requiresReview || block || !online) { event.preventDefault(); return; }
     if (!parties.trim()) { event.preventDefault(); setPartiesError("Name the parties to the document."); return; }
     submittingRef.current = true;
     setPartiesError("");
@@ -133,7 +135,7 @@ export function InvoiceFlow({ calculation, context, onBack }: { calculation: Cal
         <TextField error={partiesError || state.fieldErrors.parties} hint="This appears on the invoice and on your Certificate of Compliance, so use the names as they appear on the instrument." id="parties" label="Parties to the Document" maxLength={160} multiline name="parties" onChange={(event) => { setParties(event.target.value); setPartiesError(""); }} placeholder="e.g. Chinedu Okafor to Adeola Properties Ltd" value={parties}/>
       </Card>
       {state.status === "error" && state.message ? <Notice className="mb-4" tone="error">{state.message}{state.requiresReview ? <> <Link className="font-semibold underline" href="/transactions">Check Transactions</Link></> : null}</Notice> : null}
-      <Button disabled={state.requiresReview} loading={pending} type="submit">Generate Invoice</Button>
+      <Button disabled={state.requiresReview || !online} loading={pending} type="submit">{online ? "Generate Invoice" : "Offline: reconnect to generate"}</Button>
       <p className="mt-3 text-center text-caption leading-[17px] text-text-muted">Generating an invoice does not pay anything. It creates the reference your client quotes on their bank transfer to the branch.</p>
       {back}
     </form>}

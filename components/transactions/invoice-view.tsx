@@ -9,6 +9,7 @@ import { DetailList, DetailRow, Screen, ScreenHeading, SectionTitle } from "@/co
 import { Notice, type NoticeTone } from "@/components/mobile/states";
 import { PRODUCT_NAME } from "@/lib/branding";
 import { invoiceShareText, type InvoiceRecord } from "@/lib/transactions/invoice";
+import { useOnline } from "@/lib/use-online";
 
 type Status = { message: string; tone: NoticeTone } | null;
 
@@ -25,6 +26,7 @@ function AmberNote({ icon, children }: { icon: string; children: string }) {
 
 /** mobile transaction/invoice/[id]: the client's bill and the branch account it is paid into. */
 export function InvoiceView({ invoice }: { invoice: InvoiceRecord }) {
+  const online = useOnline();
   const [copied, setCopied] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -83,7 +85,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceRecord }) {
       </> : <AmberNote icon="warning-amber">Your branch has not published its bank details yet. Contact the branch secretariat for payment instructions before uploading proof.</AmberNote>}
     </Card>
     <div className="mt-4"><ButtonLink href={`/transactions/${invoice.id}`}>{invoice.canSubmitProof ? "My client has paid, upload proof" : "View transaction"}</ButtonLink></div>
-    <div className="mt-2"><ButtonLink download external href={`/transactions/${invoice.id}/invoice/pdf`} variant="outline">Download PDF</ButtonLink></div>
+    <div className="mt-2">{online ? <ButtonLink download external href={`/transactions/${invoice.id}/invoice/pdf`} variant="outline">Download PDF</ButtonLink> : <Button disabled variant="outline">Offline: reconnect to download</Button>}</div>
     <div className="mt-2"><Button onClick={share} variant="outline">Share invoice</Button></div>
     {status ? <Notice className="mt-3" tone={status.tone}>{status.message}</Notice> : null}
   </Screen>;

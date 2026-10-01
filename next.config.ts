@@ -11,7 +11,7 @@ function avatarRemotePatterns(): URL[] {
 }
 
 // The PDF routes read the fonts and seal from public/ with fs, so trace them into those functions.
-const pdfAssets = ["./public/fonts/**/*", "./public/nba-seal.png"];
+const pdfAssets = ["./public/fonts/DejaVu*.ttf", "./public/nba-seal.png"];
 
 const nextConfig: NextConfig = {
   images: {
@@ -20,6 +20,19 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/certificates/[id]/pdf": pdfAssets,
     "/transactions/[id]/invoice/pdf": pdfAssets,
+  },
+  async headers() {
+    return [
+      {
+        // The service worker is never cached, so an update reaches users on their next visit.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
   },
 };
 

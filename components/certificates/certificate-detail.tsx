@@ -11,6 +11,7 @@ import { Notice, type NoticeTone } from "@/components/mobile/states";
 import { CERTIFICATE_NOTE, CERTIFICATE_RECITAL, certificateParticulars } from "@/lib/certificates/wording";
 import type { Certificate } from "@/lib/certificates/types";
 import { downloadPdf } from "@/lib/preview/documents";
+import { useOnline } from "@/lib/use-online";
 
 /**
  * mobile certificate/[id]. The branch's paper and gold adapted for a screen: a single gold rule rather
@@ -18,6 +19,7 @@ import { downloadPdf } from "@/lib/preview/documents";
  * branch's document colours, deliberately not theme tokens, exactly as on mobile.
  */
 export function CertificateDetail({ certificate, verificationUrl }: { certificate: Certificate; verificationUrl: string }) {
+  const online = useOnline();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<{ message: string; tone: NoticeTone } | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -82,7 +84,7 @@ export function CertificateDetail({ certificate, verificationUrl }: { certificat
     </Card>
 
     {certificate.revoked ? <Notice className="mt-4" tone="error">This certificate has been revoked and is no longer valid. Any PDF you download is marked REVOKED.</Notice> : null}
-    <div className="mt-4"><Button loading={downloading} onClick={download}>Download PDF</Button></div>
+    <div className="mt-4"><Button disabled={!online} loading={downloading} onClick={download}>{online ? "Download PDF" : "Offline: reconnect to download"}</Button></div>
     {status ? <Notice className="mt-3" tone={status.tone}>{status.message}</Notice> : null}
   </Screen>;
 }

@@ -12,11 +12,13 @@ import { DetailList, DetailRow, Screen, ScreenHeading, SectionTitle } from "@/co
 import { Stepper } from "@/components/mobile/stepper";
 import { validateProof } from "@/lib/preview/documents";
 import type { TransactionRecord } from "@/lib/transactions/contracts";
+import { useOnline } from "@/lib/use-online";
 
 const PROOF_STEPS = ["Invoice", "Proof of payment", "Verified"];
 
 function ProofPicker({ transactionId }: { transactionId: string }) {
   const router = useRouter();
+  const online = useOnline();
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [requiresRefresh, setRequiresRefresh] = useState(false);
@@ -77,7 +79,7 @@ function ProofPicker({ transactionId }: { transactionId: string }) {
     </label>
     {file ? <div className="mt-3 flex items-center justify-between gap-3 rounded-input bg-surface-muted p-3"><span className="min-w-0 flex-1 truncate text-label text-text">{file.name}</span><button className="border-0 bg-transparent text-label font-semibold text-danger" disabled={pending || requiresRefresh} onClick={removeFile} type="button">Remove</button></div> : null}
     {error ? <p className="mt-3 text-label text-danger" role="alert">{error}</p> : null}
-    <div className="mt-4"><Button disabled={!file || requiresRefresh} loading={pending} onClick={() => setConfirming(true)}>Submit for Verification</Button></div>
+    <div className="mt-4"><Button disabled={!file || requiresRefresh || !online} loading={pending} onClick={() => setConfirming(true)}>{online ? "Submit for Verification" : "Offline: reconnect to submit"}</Button></div>
     {requiresRefresh ? <button className="mt-3 w-full border-0 bg-transparent text-label font-semibold text-primary underline" onClick={() => window.location.reload()} type="button">Refresh transaction</button> : null}
     {message ? <p className="mt-3 text-label text-primary" role="status">{message}</p> : null}
     {confirming ? <ConfirmDialog body="Your branch will review this proof of payment. You will not be able to change the transaction or replace the file while it is under review." busy={pending} cancelLabel="Keep editing" confirmLabel="Submit" onCancel={() => setConfirming(false)} onConfirm={submit} title="Submit for verification?"/> : null}
