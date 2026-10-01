@@ -1,5 +1,5 @@
 /*
- * NBA Legal Fees service worker.
+ * NBA Calculator service worker.
  *
  * What it caches: the anonymous /offline page and the static files it needs, plus fingerprinted build
  * assets, fonts and icons. What it never caches: page navigations, API routes, server actions, PDFs,

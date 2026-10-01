@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../branding.ts";
 import { formatNaira } from "../fees/legal-fees.ts";
 import { BRANCH_NAME, PRACTITIONER_NAME, PRACTITIONER_SCN, PREVIEW_REFERENCE, type PreviewInvoice } from "./documents.ts";
 import type { PDFDocument, PDFPage, PDFFont } from "pdf-lib";
@@ -147,7 +148,7 @@ export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "a
   page.drawLine({ start: { x: M, y }, end: { x: M + 185, y }, thickness: 0.7, color: color(ctx, dark) });
   y -= 16; write(page, ctx, practitionerName, M, y, 9);
   y -= 14; write(page, ctx, "Legal Practitioner · " + practitionerScn, M, y, 8.5, ctx.fonts.sans, muted);
-  y -= 26; paragraph(page, ctx, "Prepared with NBA Legal Fees for practitioner review. Figures are exclusive of VAT and disbursements.", M, y, width, 7.5, 11, ctx.fonts.sans, muted);
+  y -= 26; paragraph(page, ctx, `Prepared with ${PRODUCT_NAME} for practitioner review. Figures are exclusive of VAT and disbursements.`, M, y, width, 7.5, 11, ctx.fonts.sans, muted);
   return blob(ctx.pdf);
 }
 

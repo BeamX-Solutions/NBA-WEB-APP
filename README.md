@@ -1,4 +1,4 @@
-# NBA Legal Fees: practitioner web app
+# NBA Calculator: practitioner web app
 
 The web version of the practitioner app for Nigerian lawyers and NBA branches. A practitioner calculates the prescribed minimum fee under the Legal Practitioners (Remuneration) Order, 2023, issues an invoice their client pays into the branch account, uploads the payment slip, and receives a Certificate of Compliance that anyone can verify by its RBIN.
 

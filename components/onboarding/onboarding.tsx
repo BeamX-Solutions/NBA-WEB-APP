@@ -52,7 +52,7 @@ export function Onboarding() {
   if (!open) return null;
   const slide = slides[index];
 
-  return <div aria-label="Welcome to NBA Legal Fees" aria-modal="true" className="fixed inset-0 z-50 overflow-y-auto bg-background" role="dialog">
+  return <div aria-label={`Welcome to ${PRODUCT_NAME}`} aria-modal="true" className="fixed inset-0 z-50 overflow-y-auto bg-background" role="dialog">
     <div className="mx-auto flex min-h-full w-full max-w-[480px] flex-col min-[640px]:max-w-[720px] min-[800px]:grid min-[800px]:max-w-[1040px] min-[800px]:grid-cols-2 min-[800px]:items-center min-[800px]:gap-8 min-[800px]:px-6 min-[800px]:py-8" onTouchEnd={onTouchEnd} onTouchStart={(event) => { touchStart.current = event.touches[0].clientX; }}>
       <div className="relative h-[340px] shrink-0 min-[640px]:h-[420px] min-[800px]:h-[min(640px,calc(100dvh-64px))] min-[800px]:min-h-[420px] min-[800px]:overflow-hidden min-[800px]:rounded-card">
         <Image alt="" className="object-cover" fill preload sizes="(min-width: 1040px) 480px, (min-width: 800px) calc((100vw - 80px) / 2), (min-width: 720px) 720px, (min-width: 640px) 100vw, (min-width: 480px) 480px, 100vw" src={slide.image}/>

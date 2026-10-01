@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import { OfflineBanner } from "@/components/mobile/offline-banner";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { PRODUCT_NAME } from "@/lib/branding";
 import "./globals.css";
 
 // The mobile app's families (mobile/lib/fonts.ts). next/font downloads them at build and serves them
@@ -10,10 +11,10 @@ const playfair = Playfair_Display({ subsets: ["latin"], weight: ["600", "700"], 
 const sourceSans = Source_Sans_3({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-source-sans", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "NBA Legal Fees",
+  title: PRODUCT_NAME,
   description: "Calculate prescribed minimum legal fees under the Legal Practitioners Remuneration Order, 2023.",
-  applicationName: "NBA Legal Fees",
-  appleWebApp: { capable: true, title: "NBA Fees", statusBarStyle: "default" },
+  applicationName: PRODUCT_NAME,
+  appleWebApp: { capable: true, title: PRODUCT_NAME, statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 

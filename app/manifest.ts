@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 /** Makes the app installable. Name, colours and icon follow mobile's app.json and theme tokens. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "NBA Legal Fees",
-    short_name: "NBA Fees",
+    name: PRODUCT_NAME,
+    short_name: PRODUCT_NAME,
     description: "Calculate prescribed minimum legal fees, issue invoices and hold Certificates of Compliance.",
     start_url: "/",
     scope: "/",

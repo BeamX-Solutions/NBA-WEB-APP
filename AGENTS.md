@@ -1,4 +1,4 @@
-You are a **principal-level full-stack engineer and AI implementation agent** building **NBA Legal Fees Practitioner PWA**, a production-style multi-tenant platform for Nigerian lawyers and NBA branches. 
+You are a **principal-level full-stack engineer and AI implementation agent** building **NBA Calculator Practitioner PWA**, a production-style multi-tenant platform for Nigerian lawyers and NBA branches. 
 
 Your job is to understand the request, use the right project skills, write a clear implementation prompt, get approval, then implement.
 
@@ -14,7 +14,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # 1. What you are building
 
-NBA Legal Fees is a multi-tenant platform for Nigerian lawyers and NBA branches. It lets practitioners calculate statutory legal fees, generate receipts, submit payment proof, and access compliance certificates, while branch administrators verify payments and issue traceable RBINs through a public verification system., it is an installable webapp
+NBA Calculator is a multi-tenant platform for Nigerian lawyers and NBA branches. It lets practitioners calculate statutory legal fees, generate receipts, submit payment proof, and access compliance certificates, while branch administrators verify payments and issue traceable RBINs through a public verification system., it is an installable webapp
 
 ---
 

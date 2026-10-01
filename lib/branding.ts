@@ -1,6 +1,6 @@
 /** Product naming and attribution, mirroring mobile/lib/branding.ts. */
 
-export const PRODUCT_NAME = "NBA Legal Fees";
+export const PRODUCT_NAME = "NBA Calculator";
 
 export const PRODUCT_TAGLINE = "Fee computation and compliance for legal practitioners.";
 
