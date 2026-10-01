@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0B5D33",
+  // Lets env(safe-area-inset-*) resolve, so the bottom tab bar reaches the edge on iPhones.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

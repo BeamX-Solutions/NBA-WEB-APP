@@ -16,10 +16,13 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Bottom tab bar below 800px: 68px, the active tab an amber pill with green label. */
+/**
+ * Bottom tab bar below 800px: 68px, the active tab an amber pill with green label. Its background
+ * continues below it (after:), so a toolbar animation or bounce never shows content under the bar.
+ */
 export function BottomTabBar() {
   const pathname = usePathname();
-  return <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 gap-1 border-t border-border bg-surface px-1 pt-1 pb-[max(4px,env(safe-area-inset-bottom))] min-[800px]:hidden">
+  return <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 gap-1 border-t border-border bg-surface px-1 pt-1 pb-[max(4px,env(safe-area-inset-bottom))] after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-[100px] after:bg-surface min-[800px]:hidden">
     {tabs.map((tab) => {
       const active = isActive(pathname, tab.href);
       return <Link aria-current={active ? "page" : undefined} className={`flex h-[60px] flex-col items-center justify-center gap-[2px] rounded-button ${active ? "bg-accent text-primary" : "text-text-muted"}`} href={tab.href} key={tab.href}>

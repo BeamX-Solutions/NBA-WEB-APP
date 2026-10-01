@@ -12,7 +12,7 @@ import { BottomTabBar, HeaderTabs } from "./tab-nav";
 async function AppHeader() {
   const { signedIn, avatarUrl } = await loadHeaderIdentity();
   return <header className="sticky top-0 z-30 border-b border-border bg-background">
-    <div className="mx-auto flex max-w-[1040px] items-center gap-4 px-4 pt-2 pb-3">
+    <div className="mx-auto flex max-w-[1040px] items-center gap-4 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-3">
       <Link aria-label="Home" href={signedIn ? "/" : "/login"}><Image alt="" className="size-9 object-contain" height={36} priority src="/nba-seal.png" width={36}/></Link>
       <div className="flex flex-1 justify-center">{signedIn ? <HeaderTabs/> : null}</div>
       {signedIn ? <Link aria-label="Profile" className="grid size-[38px] place-items-center overflow-hidden rounded-full bg-surface-muted text-text-muted" href="/profile">
