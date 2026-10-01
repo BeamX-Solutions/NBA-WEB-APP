@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { InstallBanner } from "@/components/pwa/install-banner";
 import { unreadBadge } from "@/lib/notifications/contracts";
 import { loadHeaderIdentity } from "@/lib/practitioner/header";
 import { Icon } from "./icon";
@@ -42,6 +43,7 @@ export async function AppShell({ children, tabs = false }: { children: ReactNode
   const { signedIn } = await loadHeaderIdentity();
   return <div className="min-h-screen bg-background">
     <AppHeader/>
+    {tabs && signedIn ? <InstallBanner/> : null}
     <div className={tabs && signedIn ? "pb-[calc(76px+env(safe-area-inset-bottom))] min-[800px]:pb-0" : ""}>{children}</div>
     {tabs && signedIn ? <BottomTabBar/> : null}
   </div>;

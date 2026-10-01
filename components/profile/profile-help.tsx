@@ -1,6 +1,7 @@
 import { Card } from "@/components/mobile/card";
 import { Icon } from "@/components/mobile/icon";
 import { Screen, ScreenHeading, SectionTitle } from "@/components/mobile/screen";
+import { InstallCard } from "@/components/pwa/install-card";
 import { ATTRIBUTION, ORDER_FULL_NAME, PRODUCT_NAME } from "@/lib/branding";
 
 /** mobile settings/help. The answers are mobile's, except where the web works differently. */
@@ -24,6 +25,7 @@ export function ProfileHelp() {
         <p className="mt-2 text-body leading-[21px] text-text-muted">{faq.answer}</p>
       </details>)}
     </Card>
+    <InstallCard/>
     <Card className="mt-4">
       <SectionTitle icon="support-agent" underline>Contact your branch</SectionTitle>
       <p className="text-body leading-[21px] text-text-muted">Questions about a specific payment, a rejected proof, or your branch affiliation are handled by your branch, not by this app. Your branch secretariat holds those records.</p>

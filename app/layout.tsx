@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
+import Script from "next/script";
 import { OfflineBanner } from "@/components/mobile/offline-banner";
+import { InstallListener } from "@/components/pwa/install-listener";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { PRODUCT_NAME } from "@/lib/branding";
+import { EARLY_INSTALL_CAPTURE } from "@/lib/pwa/install";
 import "./globals.css";
 
 // The mobile app's families (mobile/lib/fonts.ts). next/font downloads them at build and serves them
@@ -31,6 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <OfflineBanner/>
         {children}
         <ServiceWorkerRegistration/>
+        <InstallListener/>
+        {/* Before hydration, so an early "installable" event from Chrome is not missed. */}
+        <Script id="install-capture" strategy="beforeInteractive">{EARLY_INSTALL_CAPTURE}</Script>
       </body>
     </html>
   );
