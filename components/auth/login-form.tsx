@@ -11,6 +11,7 @@ import { Icon } from "@/components/mobile/icon";
 import { ATTRIBUTION, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/branding";
 import { friendlyAuthError } from "@/lib/auth/errors";
 import { normalizeEmail, safeInternalPath, validateEmail } from "@/lib/auth/validation";
+import { ADMINISTRATOR_PATH, loadPractitionerAccess } from "@/lib/practitioner/access";
 import { createClient } from "@/lib/supabase/client";
 
 type LoginErrors = Partial<Record<"email" | "password", string>>;
@@ -38,14 +39,18 @@ export function LoginForm({ initialError = "", initialSuccess = "" }: { initialE
 
     setPending(true);
     try {
-      const { error } = await createClient().auth.signInWithPassword({ email, password });
+      const client = createClient();
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) {
         setMessageTone("error");
         setMessage(friendlyAuthError(error, "login"));
         return;
       }
       setPassword("");
-      router.replace(safeInternalPath(new URLSearchParams(window.location.search).get("next")));
+      // As on mobile, an administrator's session is ended before anything renders.
+      const access = await loadPractitionerAccess(client, data.user.id);
+      if (access.kind === "administrator") await client.auth.signOut();
+      router.replace(access.kind === "administrator" ? ADMINISTRATOR_PATH : safeInternalPath(new URLSearchParams(window.location.search).get("next")));
       router.refresh();
     } catch (error) {
       setMessageTone("error");

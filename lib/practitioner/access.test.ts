@@ -22,13 +22,23 @@ test("a missing profile is reported rather than guessed", () => {
   assert.deepEqual(accessFor(null), { kind: "unavailable" });
 });
 
-test("each account kind is routed to its own page and nowhere else", () => {
+test("administrators are sent to their own page from every page", () => {
   assert.equal(redirectFor({ kind: "administrator" }, "/transactions"), "/administrator-account");
-  assert.equal(redirectFor({ kind: "administrator" }, "/administrator-account"), null);
+  assert.equal(redirectFor({ kind: "administrator" }, "/"), "/administrator-account");
+  assert.equal(redirectFor({ kind: "administrator" }, "/membership"), "/administrator-account");
+});
+
+test("an account that could not be confirmed is held at a retry page, never let through", () => {
+  assert.equal(redirectFor({ kind: "unavailable" }, "/profile"), "/account-unavailable");
+  assert.equal(redirectFor({ kind: "unavailable" }, "/"), "/account-unavailable");
+  assert.equal(redirectFor({ kind: "unavailable" }, "/account-unavailable"), null);
+});
+
+test("members and practitioners are routed to their own pages and nowhere else", () => {
   assert.equal(redirectFor({ kind: "membership" }, "/"), "/membership");
+  assert.equal(redirectFor({ kind: "membership" }, "/account-unavailable"), "/membership");
   assert.equal(redirectFor({ kind: "membership" }, "/membership"), null);
   assert.equal(redirectFor({ kind: "practitioner" }, "/membership"), "/");
-  assert.equal(redirectFor({ kind: "practitioner" }, "/administrator-account"), "/");
+  assert.equal(redirectFor({ kind: "practitioner" }, "/account-unavailable"), "/");
   assert.equal(redirectFor({ kind: "practitioner" }, "/certificates"), null);
-  assert.equal(redirectFor({ kind: "unavailable" }, "/profile"), null);
 });

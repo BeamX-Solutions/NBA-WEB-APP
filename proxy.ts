@@ -48,8 +48,10 @@ export async function proxy(request: NextRequest) {
     return copySessionState(response, NextResponse.redirect(login));
   }
 
-  // Administrators and members awaiting branch approval get their own page, as on mobile.
+  // As on mobile, an administrator's session is ended rather than kept; members awaiting
+  // approval and accounts that could not be confirmed get their own page.
   const access = await loadPractitionerAccess(client, data.claims.sub);
+  if (access.kind === "administrator") await client.auth.signOut();
   const destination = redirectFor(access, request.nextUrl.pathname);
   if (destination) return copySessionState(response, NextResponse.redirect(new URL(destination, request.url)));
 
@@ -57,5 +59,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/profile/:path*", "/transactions/:path*", "/certificates/:path*", "/membership", "/administrator-account"],
+  matcher: ["/", "/profile/:path*", "/transactions/:path*", "/certificates/:path*", "/membership", "/account-unavailable"],
 };

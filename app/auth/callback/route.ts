@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ADMINISTRATOR_PATH, loadPractitionerAccess } from "@/lib/practitioner/access";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -15,9 +16,18 @@ export async function GET(request: NextRequest) {
   }
 
   const client = await createClient();
-  const { error } = await client.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
+  const { data, error } = await client.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
   if (error) {
     const response = NextResponse.redirect(new URL(failure, request.url));
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
+
+  // Recovery included: /reset-password is outside the proxy, so an administrator is signed out here.
+  const access = await loadPractitionerAccess(client, data.user.id);
+  if (access.kind === "administrator") {
+    await client.auth.signOut();
+    const response = NextResponse.redirect(new URL(ADMINISTRATOR_PATH, request.url));
     response.headers.set("Cache-Control", "private, no-store");
     return response;
   }

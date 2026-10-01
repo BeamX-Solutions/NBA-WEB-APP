@@ -12,8 +12,17 @@ export type PractitionerAccess =
   | { kind: "membership" }
   | { kind: "unavailable" };
 
-export const ADMINISTRATOR_PATH = "/administrator-account";
 export const MEMBERSHIP_PATH = "/membership";
+export const ACCOUNT_UNAVAILABLE_PATH = "/account-unavailable";
+/** Where an administrator lands once their session has been ended. Public: it needs no session. */
+export const ADMINISTRATOR_PATH = "/administrator-account";
+/** The login page carrying mobile's refusal, which the administrator screen leads back to. */
+export const ADMINISTRATOR_LOGIN_PATH = "/login?auth_error=administrator";
+
+/** mobile lib/auth-context ADMIN_REJECTION. */
+export const ADMINISTRATOR_REJECTION =
+  "This is an administrator account. Administrators sign in on the web console. " +
+  "If you also practise, sign in here with your practitioner account.";
 
 const administratorRoles = new Set(["branch_admin", "super_admin"]);
 
@@ -27,13 +36,16 @@ export function accessFor(row: AccessRow | null): PractitionerAccess {
   return { kind: "unavailable" };
 }
 
-/** Where a request for `pathname` should go instead, or null to let it through. */
+/**
+ * Where a request for `pathname` should go instead, or null to let it through.
+ * Administrators are sent to their own page; the caller must end their session first.
+ */
 export function redirectFor(access: PractitionerAccess, pathname: string): string | null {
-  const onGate = pathname === ADMINISTRATOR_PATH || pathname === MEMBERSHIP_PATH;
-  if (access.kind === "administrator") return pathname === ADMINISTRATOR_PATH ? null : ADMINISTRATOR_PATH;
+  if (access.kind === "administrator") return ADMINISTRATOR_PATH;
   if (access.kind === "membership") return pathname === MEMBERSHIP_PATH ? null : MEMBERSHIP_PATH;
-  if (access.kind === "practitioner" && onGate) return "/";
-  return null;
+  if (access.kind === "unavailable") return pathname === ACCOUNT_UNAVAILABLE_PATH ? null : ACCOUNT_UNAVAILABLE_PATH;
+  const onGate = pathname === MEMBERSHIP_PATH || pathname === ACCOUNT_UNAVAILABLE_PATH;
+  return onGate ? "/" : null;
 }
 
 export async function loadPractitionerAccess(client: SupabaseClient, userId: string): Promise<PractitionerAccess> {

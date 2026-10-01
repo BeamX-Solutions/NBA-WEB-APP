@@ -6,7 +6,7 @@ import { Button } from "@/components/mobile/button";
 import { friendlyAuthError } from "@/lib/auth/errors";
 import { createClient } from "@/lib/supabase/client";
 
-/** The outline "Sign out" of mobile's MembershipPending and AdminWebOnly screens. */
+/** The outline "Sign out" of mobile's MembershipPending screen, also used on the account-unavailable gate. */
 export function SignOutButton() {
   const router = useRouter();
   const [message, setMessage] = useState("");
