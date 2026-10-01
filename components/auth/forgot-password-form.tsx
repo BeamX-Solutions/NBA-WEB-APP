@@ -26,7 +26,10 @@ export function ForgotPasswordForm({ initialError = "" }: { initialError?: strin
     if (validationError) return;
     setPending(true);
     try {
-      const { error } = await createClient().auth.resetPasswordForEmail(email);
+      // Without redirectTo the link goes to the Supabase Site URL, which the mobile app shares.
+      const { error } = await createClient().auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?flow=recovery`,
+      });
       if (error) {
         setMessage(friendlyAuthError(error, "request-reset"));
         return;
