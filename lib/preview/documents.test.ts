@@ -16,7 +16,7 @@ test("invoice, terms, and certificate layout export at A4", async () => {
   globalThis.fetch = async (url) => new Response(await readFile("public" + String(url)), { status: 200 });
   try {
     const document = DOCUMENT_TYPES.find((item) => item.id === "deed-of-conveyance")!;
-    const basis = { document, amountKobo: 1_500_000_000n, fee: calculateLegalFee(document.category, 1_500_000_000n) };
+    const basis = { document, amountKobo: 1_500_000_000n, fee: calculateLegalFee(document, 1_500_000_000n) };
     const invoice = { ...basis, parties: "Chinedu Okafor to Adeola Properties Ltd", createdAt: new Date("2026-09-23T00:00:00Z") };
     const outputs = [
       await createInvoicePdf(invoice),

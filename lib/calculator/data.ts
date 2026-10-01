@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { CalculatorBranch, CalculatorContext, CalculatorSubscription } from "@/lib/calculator/types";
+import { firstNameOf } from "@/lib/names";
 
 type UnknownRow = Record<string, unknown>;
 
@@ -54,9 +55,14 @@ function parseSubscription(value: unknown): CalculatorSubscription | null {
   };
 }
 
+function hasBankDetails(profile: UnknownRow): boolean {
+  return Boolean(asNullableString(profile.bank_account_name) && asNullableString(profile.bank_account_number) && asNullableString(profile.bank_name));
+}
+
 function displayNames(fullName: string): Pick<CalculatorContext, "displayName" | "firstName"> {
   const displayName = fullName.trim() || "Practitioner";
-  return { displayName, firstName: displayName.split(/\s+/)[0] || "Practitioner" };
+  // As mobile: skip honorifics, and greet as "Counsel" when no name is known.
+  return { displayName, firstName: firstNameOf(fullName) ?? "Counsel" };
 }
 
 export async function loadCalculatorContext(): Promise<CalculatorContext> {
@@ -67,7 +73,7 @@ export async function loadCalculatorContext(): Promise<CalculatorContext> {
   const [profileResult, subscriptionResult] = await Promise.all([
     client
       .from("profiles")
-      .select("full_name, scn, branch_id, branches(name, state, activation_status, account_name, account_number, bank_name)")
+      .select("full_name, scn, branch_id, bank_account_name, bank_account_number, bank_name, branches(name, state, activation_status, account_name, account_number, bank_name)")
       .eq("id", user.id)
       .maybeSingle(),
     client
@@ -82,8 +88,9 @@ export async function loadCalculatorContext(): Promise<CalculatorContext> {
   if (profileResult.error || subscriptionResult.error) {
     return {
       branch: null,
+      hasBankDetails: false,
       scn: null,
-      ...displayNames("Practitioner"),
+      ...displayNames(""),
       loadWarning: "Your account details could not be loaded. Fee calculation is still available, but invoice creation may not work until you refresh.",
       subscription: null,
     };
@@ -93,8 +100,9 @@ export async function loadCalculatorContext(): Promise<CalculatorContext> {
   if (!profile) {
     return {
       branch: null,
+      hasBankDetails: false,
       scn: null,
-      ...displayNames("Practitioner"),
+      ...displayNames(""),
       loadWarning: "Your practitioner profile is not available. Contact your branch administrator. Fee calculation remains available.",
       subscription: null,
     };
@@ -103,6 +111,7 @@ export async function loadCalculatorContext(): Promise<CalculatorContext> {
   const branch = parseBranch(profile.branches);
   return {
     branch,
+    hasBankDetails: hasBankDetails(profile),
     scn: asNullableString(profile.scn),
     ...displayNames(asString(profile.full_name)),
     loadWarning: branch ? null : "Your branch details are unavailable. Fee calculation remains available, but an invoice cannot be created yet.",

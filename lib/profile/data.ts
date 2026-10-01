@@ -37,6 +37,9 @@ function parseProfile(value: unknown, authEmail: string): PractitionerProfile | 
   const branch = branchFrom(row.branches);
   return {
     avatarUrl: asNullableString(row.avatar_url),
+    bankAccountName: asString(row.bank_account_name),
+    bankAccountNumber: asString(row.bank_account_number),
+    bankName: asString(row.bank_name),
     branchId: asNullableString(row.branch_id),
     branchName: branch ? asString(branch.name, "Branch unavailable") : "Branch unavailable",
     branchState: branch ? asNullableString(branch.state) : null,
@@ -75,7 +78,7 @@ export async function loadProfilePageData(nextPath: string): Promise<ProfileLoad
   const [profileResult, subscriptionResult] = await Promise.all([
     client
       .from("profiles")
-      .select("id, full_name, email, phone, scn, branch_id, practice_state, role, avatar_url, branches(name, state)")
+      .select("id, full_name, email, phone, scn, branch_id, practice_state, role, avatar_url, bank_account_name, bank_account_number, bank_name, branches(name, state)")
       .eq("id", user.id)
       .maybeSingle(),
     client

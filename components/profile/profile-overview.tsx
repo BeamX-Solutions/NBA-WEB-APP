@@ -1,59 +1,90 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FormNotice } from "@/components/ui/form-notice";
-import { DetailRow, ProfileAvatar, ProfileCard, ProfileFrame, ProfileIcon, profileFocus, primaryButton } from "@/components/profile/profile-ui";
+import { Badge } from "@/components/mobile/badge";
+import { Button, ButtonLink } from "@/components/mobile/button";
+import { Card } from "@/components/mobile/card";
+import { ConfirmDialog } from "@/components/mobile/confirm-dialog";
+import { DetailList, DetailRow, Screen, SectionTitle, SettingsRow } from "@/components/mobile/screen";
+import { Notice } from "@/components/mobile/states";
+import { ProfileAvatar } from "@/components/profile/avatar";
 import { friendlyAuthError } from "@/lib/auth/errors";
-import { formatNaira, formatProfileDate, labelEnum } from "@/lib/profile/format";
+import { formatNaira } from "@/lib/fees/legal-fees";
+import { formatProfileDate, labelEnum } from "@/lib/profile/format";
 import type { PractitionerProfile, PractitionerSubscription } from "@/lib/profile/types";
 import { createClient } from "@/lib/supabase/client";
 
-const settings = [
-  { label: "Edit Profile", icon: "edit", href: "/profile/edit" },
-  { label: "Notification Settings", icon: "bell", href: "/profile/notifications" },
-  { label: "Security", icon: "shield", href: "/profile/security" },
-  { label: "Help & Support", icon: "help", href: "/profile/help" },
-] as const;
-
 function SubscriptionCard({ subscription }: { subscription: PractitionerSubscription | null }) {
-  if (!subscription) {
-    return <ProfileCard icon={<ProfileIcon kind="medal"/>} title="Subscription Status"><p className="text-[15px] leading-[1.55] text-[#66717e]">No subscription record is available for this account. Contact your branch before creating a transaction.</p><Link className={`${primaryButton} mt-5`} href="/profile/plans">View subscription details</Link></ProfileCard>;
-  }
-
-  const status = subscription.isCurrent ? "Active" : subscription.status === "active" ? "Expired" : labelEnum(subscription.status);
-  return <ProfileCard icon={<ProfileIcon kind="medal"/>} title="Subscription Status"><div className="mb-5 flex items-center justify-between gap-3"><strong className="text-[17px]">{labelEnum(subscription.plan)} ({labelEnum(subscription.rateType)} rate)</strong><span className={`rounded-full px-3 py-2 text-[13px] font-semibold ${subscription.isCurrent ? "bg-[#e8f8ef] text-[#17704a]" : "bg-[#fff2ef] text-[#a23d2d]"}`}>{status}</span></div><dl><DetailRow label="Amount Paid" value={formatNaira(subscription.amount)}/><DetailRow label="Starts" value={formatProfileDate(subscription.startsAt)}/><DetailRow label="Expires" value={formatProfileDate(subscription.expiresAt)}/></dl><Link className={`${primaryButton} mt-5`} href="/profile/plans">View subscription details</Link></ProfileCard>;
+  const active = subscription?.isCurrent ? subscription : null;
+  return <Card>
+    <SectionTitle icon="workspace-premium" underline>Subscription Status</SectionTitle>
+    {active ? <>
+      <div className="mb-2 flex items-center justify-between gap-3"><p className="text-body-lg font-bold text-text">{labelEnum(active.plan)}{active.rateType === "branch_discounted" ? " (Branch rate)" : ""}</p><Badge label="Active"/></div>
+      <DetailList>
+        {/* Stored in kobo, like every money column. */}
+        <DetailRow label="Amount Paid" value={formatNaira(BigInt(Math.round(active.amount)))}/>
+        <DetailRow label="Expiry Date" value={formatProfileDate(active.expiresAt)}/>
+      </DetailList>
+    </> : <p className="text-body leading-[22px] text-text-muted">You do not have an active subscription. Fee calculations remain free. A subscription is required to generate invoices and certificates.</p>}
+    <div className="mt-4"><ButtonLink href="/profile/plans">{active ? "Renew Now" : "Choose a Plan"}</ButtonLink></div>
+  </Card>;
 }
+
+/** mobile (tabs)/profile. From 800px the details sit beside subscription and settings. */
 export function ProfileOverview({ profile, subscription }: { profile: PractitionerProfile; subscription: PractitionerSubscription | null }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [message, setMessage] = useState("");
 
   async function signOut() {
     setSigningOut(true);
     setMessage("");
     try {
       const { error } = await createClient().auth.signOut();
-      if (error) {
-        setMessage(friendlyAuthError(error, "logout"));
-        return;
-      }
+      if (error) { setMessage(friendlyAuthError(error, "logout")); setConfirming(false); return; }
       router.replace("/login");
       router.refresh();
     } catch (error) {
       setMessage(friendlyAuthError(error, "logout"));
+      setConfirming(false);
     } finally {
       setSigningOut(false);
     }
   }
 
-  return <ProfileFrame navigation><div className="mb-5 flex flex-col items-center text-center"><ProfileAvatar fullName={profile.fullName} large url={profile.avatarUrl}/><h1 className="mt-4 text-[26px] leading-[1.2] font-bold">{profile.fullName}</h1><p className="mt-2 text-[15px] text-[#66717e]">{profile.scn} · {profile.branchName}</p></div>
-    <div className="grid gap-4 min-[800px]:grid-cols-2 min-[800px]:items-start">
-      <ProfileCard icon={<ProfileIcon kind="briefcase"/>} title="Professional Details"><dl><DetailRow label="Full Name" value={profile.fullName}/><DetailRow label="Supreme Court Number" value={profile.scn}/><DetailRow label="Branch" value={profile.branchName}/><DetailRow label="State of Practice" value={profile.practiceState || "Not provided"}/><DetailRow label="Email" value={profile.email}/><DetailRow label="Phone" value={profile.phone || "Not provided"}/></dl></ProfileCard>
-      <div className="grid gap-4"><SubscriptionCard subscription={subscription}/>
-      <ProfileCard icon={<ProfileIcon kind="settings"/>} title="Account Settings"><div className="divide-y divide-[#eceeee]">{settings.map((item) => <Link className={`flex min-h-[58px] items-center gap-4 text-[16px] ${profileFocus}`} href={item.href} key={item.href}><span aria-hidden="true" className="w-5 text-center text-[20px] text-[#66717e]"><ProfileIcon kind={item.icon}/></span><span className="flex-1">{item.label}</span><span aria-hidden="true" className="text-[24px] text-[#88919a]">›</span></Link>)}</div></ProfileCard>
-      <button className={`min-h-[54px] w-full rounded-[10px] border-2 border-[#be4834] bg-white text-[17px] font-semibold text-[#b74330] ${profileFocus}`} disabled={signingOut} onClick={signOut} type="button">{signingOut ? "Logging out…" : "Log Out"}</button>{message ? <FormNotice tone="error">{message}</FormNotice> : null}</div>
+  return <Screen wide>
+    <div className="mb-4 flex flex-col items-center text-center">
+      <div className="mb-3"><ProfileAvatar url={profile.avatarUrl}/></div>
+      <h1 className="m-0 text-heading font-bold text-text">{profile.fullName || "Practitioner"}</h1>
+      <p className="mt-1 text-label text-text-muted">{profile.scn || "No SCN recorded"}{profile.branchName ? ` - ${profile.branchName}` : ""}</p>
     </div>
-  </ProfileFrame>;
+    <div className="grid gap-4 min-[800px]:grid-cols-2 min-[800px]:items-start">
+      <Card>
+        <SectionTitle icon="work-outline" underline>Professional Details</SectionTitle>
+        <DetailList>
+          <DetailRow label="Full Name" value={profile.fullName || "Not set"}/>
+          <DetailRow label="Supreme Court Number" value={profile.scn || "Not set"}/>
+          <DetailRow label="Branch" value={profile.branchName || "No branch affiliation"}/>
+          <DetailRow label="State of Practice" value={profile.practiceState || "Not set"}/>
+          <DetailRow label="Email" value={profile.email}/>
+          <DetailRow label="Phone" value={profile.phone || "Not set"}/>
+        </DetailList>
+      </Card>
+      <div className="grid gap-4">
+        <SubscriptionCard subscription={subscription}/>
+        <Card>
+          <SectionTitle icon="settings" underline>Account Settings</SectionTitle>
+          <SettingsRow href="/profile/edit" icon="edit" label="Edit Profile"/>
+          <SettingsRow href="/profile/notifications" icon="notifications-none" label="Notification Settings"/>
+          <SettingsRow href="/profile/security" icon="security" label="Security"/>
+          <SettingsRow href="/profile/help" icon="help-outline" label="Help & Support"/>
+        </Card>
+        <div className="mt-2"><Button onClick={() => setConfirming(true)} variant="danger">Log Out</Button></div>
+        {message ? <Notice tone="error">{message}</Notice> : null}
+      </div>
+    </div>
+    {confirming ? <ConfirmDialog body="You will need your email and password to sign in again. Any certificates already issued stay available once you return." busy={signingOut} cancelLabel="Stay signed in" confirmLabel="Log out" destructive onCancel={() => setConfirming(false)} onConfirm={signOut} title="Log out?"/> : null}
+  </Screen>;
 }

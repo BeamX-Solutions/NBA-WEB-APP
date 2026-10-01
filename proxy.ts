@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { loadPractitionerAccess, redirectFor } from "@/lib/practitioner/access";
 import { supabaseConfig } from "@/lib/supabase/config";
 
 const sessionHeaders = ["cache-control", "expires", "pragma"] as const;
@@ -47,9 +48,14 @@ export async function proxy(request: NextRequest) {
     return copySessionState(response, NextResponse.redirect(login));
   }
 
+  // Administrators and members awaiting branch approval get their own page, as on mobile.
+  const access = await loadPractitionerAccess(client, data.claims.sub);
+  const destination = redirectFor(access, request.nextUrl.pathname);
+  if (destination) return copySessionState(response, NextResponse.redirect(new URL(destination, request.url)));
+
   return response;
 }
 
 export const config = {
-  matcher: ["/", "/profile/:path*", "/transactions/:path*", "/certificates/:path*"],
+  matcher: ["/", "/profile/:path*", "/transactions/:path*", "/certificates/:path*", "/membership", "/administrator-account"],
 };

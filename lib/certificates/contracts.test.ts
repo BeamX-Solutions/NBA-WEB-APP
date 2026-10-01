@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { certificatePdfLocation, decodeRbinSegment, normalizeRbin, parseCertificate, parseVerification, verificationPath } from "./contracts.ts";
+import { DEFAULT_VERIFICATION_BASE_URL, normalizeRbin, parseCertificate, parseVerification, rbinFromSegments, verificationBaseUrl, verificationPath, verificationUrlFor } from "./contracts.ts";
 
 const id = "b18c2bad-bfcb-40d5-b7d0-1c6ea836a3d6";
 const row = {
   id, transaction_id: "96e8931a-3578-46b0-8109-620f2f1baefd", certificate_number: "NBA-CC-2026-0001",
-  issued_at: "2026-09-04T22:54:27Z", revoked_at: null, revocation_reason: null, pdf_url: null,
-  transactions: { status: "verified", rbin: "NBA/ANAOCHA/0002/2026", document_type: "deed_of_assignment", consideration: "3500000000", parties: "Private parties", branches: { name: "Anaocha", chairman_name: null } },
+  issued_at: "2026-09-04T22:54:27Z", revoked_at: null, revocation_reason: null,
+  transactions: { status: "verified", rbin: "NBA/ANAOCHA/0002/2026", document_type: "deed_of_assignment", consideration: "3500000000", parties: "Private parties", branches: { name: "Anaocha", chairman_name: null, chairman_signature_url: "2a2eec98-0ea5-437d-ab7a-c35cc3b71869/signature.png" } },
 };
 const identity = { name: "Test Practitioner", scn: "SCN/TEST" };
 
@@ -18,9 +18,10 @@ test("issued records retain actual branch, identity, kobo precision and legacy c
   assert.equal(parsed.chairman, "Unavailable");
   assert.equal(parsed.practitioner, identity.name);
   assert.equal(parsed.certificateNumber, "NBA-CC-2026-0001");
-  assert.equal(parsed.pdfUrl, null);
+  assert.equal(parsed.chairmanSignaturePath, "2a2eec98-0ea5-437d-ab7a-c35cc3b71869/signature.png");
   assert.equal(parsed.revoked, false);
   assert.equal(parsed.issuedAt, "04/09/2026");
+  assert.equal(parsed.issuedOn, "4 September 2026");
 });
 
 test("malformed and unverified certificates cannot become issued UI records", () => {
@@ -34,10 +35,7 @@ test("RBIN URLs preserve slash identifiers and never double-decode input", () =>
   assert.equal(normalizeRbin(" nba/anaocha/0002/2026 "), "NBA/ANAOCHA/0002/2026");
   assert.equal(normalizeRbin("NBA-2026-0001"), "NBA-2026-0001");
   for (const input of ["", "NBA%2FSECRET", "NBA\nBAD", "<script>", "a".repeat(201)]) assert.equal(normalizeRbin(input), null);
-  assert.equal(decodeRbinSegment("NBA%2FANAOCHA%2F0002%2F2026"), row.transactions.rbin);
-  assert.equal(decodeRbinSegment(row.transactions.rbin), row.transactions.rbin);
-  assert.equal(decodeRbinSegment("NBA%252FSECRET"), null);
-  assert.equal(decodeRbinSegment("NBA%ZZ"), null);
+  assert.equal(rbinFromSegments([row.transactions.rbin]), row.transactions.rbin);
   assert.equal(verificationPath(row.transactions.rbin), "/verify/NBA%2FANAOCHA%2F0002%2F2026");
 });
 
@@ -50,8 +48,17 @@ test("verification projection cannot include private particulars even if the res
   assert.equal(parseVerification({ ...publicRow, revoked: "false" }), null);
 });
 
-test("PDF reads accept only the configured project Storage paths", () => {
-  const project = "https://project.supabase.co";
-  for (const kind of ["public", "authenticated", "sign"]) assert.deepEqual(certificatePdfLocation(`${project}/storage/v1/object/${kind}/certificates/user/document.pdf?token=unused`, project), { bucket: "certificates", path: "user/document.pdf" });
-  for (const value of [null, "path/to/document.pdf", "javascript:alert(1)", "https://evil.example/document.pdf", `${project}/arbitrary/file.pdf`, `${project}/storage/v1/object/public/certificates/a%2F..%2Fb`, `${project}/storage/v1/object/public/certificates/a%5Cb`, `${project}/storage/v1/object/public/bucket%2Fother/file`]) assert.equal(certificatePdfLocation(value, project), null);
+test("catch-all verify segments resolve encoded and literal-slash RBINs to the same reference", () => {
+  assert.equal(rbinFromSegments(["NBA%2FANAOCHA%2F0002%2F2026"]), row.transactions.rbin);
+  assert.equal(rbinFromSegments(["NBA", "ANAOCHA", "0002", "2026"]), row.transactions.rbin);
+  assert.equal(rbinFromSegments(["nba", "anaocha", "0002", "2026"]), row.transactions.rbin);
+  assert.equal(rbinFromSegments([]), null);
+  assert.equal(rbinFromSegments(["NBA%ZZ"]), null);
+  assert.equal(rbinFromSegments(["NBA%252FSECRET"]), null);
+});
+
+test("verification URLs match mobile's verificationUrlFor and fall back to the shared host", () => {
+  assert.equal(verificationUrlFor(row.transactions.rbin, "https://nba-mobile-app.vercel.app"), "https://nba-mobile-app.vercel.app/verify/NBA%2FANAOCHA%2F0002%2F2026");
+  assert.equal(verificationBaseUrl("https://verify.example.org/"), "https://verify.example.org");
+  for (const value of [undefined, "", "not a url", "javascript:alert(1)", "ftp://example.org"]) assert.equal(verificationBaseUrl(value), DEFAULT_VERIFICATION_BASE_URL);
 });

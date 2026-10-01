@@ -77,7 +77,7 @@ async function blob(pdf: PDFDocument) { return new Blob([new Uint8Array(await pd
 export async function createInvoicePdf(invoice: PreviewInvoice): Promise<Blob> {
   const ctx = await context();
   const page = ctx.pdf.addPage([W, H]);
-  write(page, ctx, "Branch Fee Invoice", M, 806, 19, ctx.fonts.serif, green);
+  write(page, ctx, "Invoice", M, 806, 19, ctx.fonts.serif, green);
   write(page, ctx, BRANCH_NAME, M, 786, 9.5, ctx.fonts.sans, muted);
   right(page, ctx, "REFERENCE", W - M, 813, 7.6, ctx.fonts.sans, muted);
   right(page, ctx, "Pending issuance", W - M, 797, 9.5, ctx.fonts.bold);
@@ -89,9 +89,9 @@ export async function createInvoicePdf(invoice: PreviewInvoice): Promise<Blob> {
   y = field(page, ctx, "Supreme Court number", PRACTITIONER_SCN, y);
   y = field(page, ctx, "Parties", invoice.parties, y);
   y = field(page, ctx, "Document type", invoice.document.label, y);
-  y = field(page, ctx, invoice.document.category === "tenancy" ? "Annual rental value" : "Consideration / value", formatNaira(invoice.amountKobo), y);
-  y = field(page, ctx, "Professional fee", formatNaira(invoice.fee.primaryFeeKobo), y);
-  y = field(page, ctx, "Branch amount", formatNaira(invoice.fee.branchLevyKobo) + " (local preview)", y);
+  y = field(page, ctx, invoice.document.basisLabel, formatNaira(invoice.amountKobo), y);
+  y = field(page, ctx, "Professional fee", formatNaira(invoice.fee.professionalFeeKobo), y);
+  y = field(page, ctx, "Branch fee (2%, deducted)", formatNaira(invoice.fee.branchFeeKobo) + " (local preview)", y);
   y -= 27;
   write(page, ctx, "Pay to", M, y, 12, ctx.fonts.serif);
   y -= 13;
@@ -131,13 +131,13 @@ export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "a
   y = field(page, ctx, "Instructions accepted", date(new Date()), y);
   y = field(page, ctx, "Legal practitioner", practitionerName, y);
   y = field(page, ctx, "Supreme Court number", practitionerScn, y) - 22;
-  const basisName = basis.document.category === "tenancy" ? "annual rental value" : basis.document.category === "mortgage" ? "mortgage value" : "property value or consideration";
+  const basisName = basis.document.basisLabel.toLowerCase();
   section("The instruction", "You have instructed me in connection with " + matter.trim() + ". The work is the preparation of a " + basis.document.label + ", assessed under " + basis.document.description.split(" - ")[0] + " of the Legal Practitioners (Remuneration) Order, 2023.");
   section("Basis of charge", "The fee is calculated on the " + basisName + " of " + formatNaira(basis.amountKobo) + ". The relevant bands in the Order are applied to that value.");
-  section("The fee", formatNaira(basis.fee.primaryFeeKobo) + " is the prescribed minimum professional fee. The calculation comprises " + basis.fee.lines.map((item) => item.label + ": " + formatNaira(item.amountKobo)).join("; ") + ". VAT and disbursements are separate.");
-  section("The other party", "Where the other party's practitioner reviews the draft instrument under the applicable Scale 4 rule, the indicated half-rate is " + formatNaira(basis.fee.counterpartyFeeKobo) + ". This is not payable to me and is shown only for context.");
+  section("The fee", formatNaira(basis.fee.professionalFeeKobo) + " is the prescribed minimum professional fee. The Order's figures are minimums, not fixed prices. The calculation comprises " + basis.fee.lines.map((item) => item.label + ": " + formatNaira(item.amountKobo)).join("; ") + ". VAT and disbursements are separate.");
+  if (basis.fee.halfRateFeeKobo !== null) section("The other party", "Where the other party's practitioner reviews the draft instrument under the applicable Scale 4 rule, the indicated half-rate is " + formatNaira(basis.fee.halfRateFeeKobo) + ". This is not payable to me and is shown only for context.");
   if (ctx.pdf.getPageCount() === 1) { page = ctx.pdf.addPage([W, H]); y = 790; }
-  section("Branch fee and registration", (practitioner?.branch ? practitioner.branch + " must confirm " : "The branch must confirm ") + formatNaira(basis.fee.branchLevyKobo) + " as the branch amount and issue payment details before a transfer. This document creates no payment reference or transaction.");
+  section("Payment through the branch", "The fee is paid into the account of " + (practitioner?.branch ?? "the branch") + " against an invoice reference. The branch keeps its fee of " + formatNaira(basis.fee.branchFeeKobo) + " (2% of the fee) and sends the balance to me. This document creates no payment reference or transaction.");
   section("What is not included", "Value Added Tax and disbursements are excluded, including stamp duty, registration fees, search fees and the cost of Governor's Consent where required.");
   section("Verification", "If a transaction is later created, paid and verified by the branch, the branch may issue a Certificate of Compliance carrying a unique verifiable reference.");
   ensure(130);

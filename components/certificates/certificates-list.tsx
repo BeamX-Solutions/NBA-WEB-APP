@@ -1,68 +1,88 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FormNotice, type NoticeTone } from "@/components/ui/form-notice";
-import { TransactionShell } from "@/components/transactions/transaction-shell";
+import { useState } from "react";
+import { Badge } from "@/components/mobile/badge";
+import { Button, ButtonLink } from "@/components/mobile/button";
+import { Card } from "@/components/mobile/card";
+import { Icon } from "@/components/mobile/icon";
+import { Screen, ScreenHeading } from "@/components/mobile/screen";
+import { EmptyState, ErrorState, Notice, type NoticeTone } from "@/components/mobile/states";
+import { verificationUrlFor } from "@/lib/certificates/contracts";
 import type { Certificate } from "@/lib/certificates/types";
-import { verificationPath } from "@/lib/certificates/contracts";
 
-type DisplayMode = "grid" | "list";
-const focusClass = "focus-visible:outline-[3px] focus-visible:outline-nba-focus focus-visible:outline-offset-2";
+type ViewMode = "grid" | "list";
 
-function ViewIcon({ mode }: { mode: DisplayMode }) {
-  return mode === "grid" ? <svg aria-hidden="true" fill="none" height="19" viewBox="0 0 24 24" width="19"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" stroke="currentColor" strokeWidth="2"/></svg> : <svg aria-hidden="true" fill="currentColor" height="19" viewBox="0 0 24 24" width="19"><path d="M2 3h4v4H2zm6 0h14v4H8zM2 10h4v4H2zm6 0h14v4H8zM2 17h4v4H2zm6 0h14v4H8z"/></svg>;
+const heading = <ScreenHeading subtitle="View and download your official Certificates of Compliance." title="My Certificates"/>;
+
+function ViewModeOption({ icon, label, onSelect, selected }: { icon: string; label: string; onSelect: () => void; selected: boolean }) {
+  return <button aria-pressed={selected} className={`flex items-center gap-1 rounded-[6px] border-0 px-3 py-2 text-label ${selected ? "bg-surface font-semibold text-text" : "bg-transparent text-text-muted"}`} onClick={onSelect} type="button"><Icon name={icon} size={18}/>{label}</button>;
 }
 
-function ShareIcon() {
-  return <svg aria-hidden="true" fill="none" height="23" viewBox="0 0 24 24" width="23"><circle cx="18" cy="5" fill="currentColor" r="2.5"/><circle cx="6" cy="12" fill="currentColor" r="2.5"/><circle cx="18" cy="19" fill="currentColor" r="2.5"/><path d="m8 11 8-5M8 13l8 5" stroke="currentColor" strokeWidth="2"/></svg>;
+function CertificateCard({ certificate, compact, onShare }: { certificate: Certificate; compact: boolean; onShare: (certificate: Certificate) => void }) {
+  const revoked = certificate.revoked;
+  return <Card>
+    {!compact ? <div className={`relative mb-3 flex h-[150px] flex-col items-center justify-center gap-2 overflow-hidden rounded-input ${revoked ? "bg-danger-surface" : "bg-success-surface"}`}>
+      <Icon color={revoked ? "var(--color-danger)" : "var(--color-primary)"} name={revoked ? "gpp-bad" : "workspace-premium"} size={40}/>
+      <span className={`text-caption font-semibold ${revoked ? "text-danger" : "text-primary-text"}`}>Certificate of Compliance</span>
+      <span className="absolute right-2 bottom-2 rounded-full bg-text px-2 py-[2px] text-[10px] font-bold tracking-[0.5px] text-text-inverse">{revoked ? "REVOKED" : "VALID"}</span>
+    </div> : null}
+    <div className="mb-3 flex justify-between"><Badge className="bg-surface-muted text-text-muted" label={certificate.year}/>{revoked ? <Badge className="bg-danger-surface text-danger" label="Revoked"/> : <Badge label="Official Issue"/>}</div>
+    <h2 className="m-0 text-title font-bold text-text">Certificate of Compliance</h2>
+    {!compact ? <p className="mt-1 text-label text-text-muted">{certificate.documentType}</p> : null}
+    <dl className="my-3 flex gap-4 rounded-input bg-surface-muted p-3">
+      <div className="min-w-0 flex-1"><dt className="text-caption text-text-muted">RBIN</dt><dd className="mt-1 break-all text-label font-semibold text-primary">{certificate.rbin}</dd></div>
+      <div className="flex-1"><dt className="text-caption text-text-muted">Date Issued</dt><dd className="mt-1 text-label font-semibold text-primary">{certificate.issuedAt}</dd></div>
+    </dl>
+    <div className="flex items-center gap-2">
+      <ButtonLink className="flex-1" href={`/certificates/${certificate.id}`}>View Certificate</ButtonLink>
+      <button aria-label={`Share certificate ${certificate.rbin}`} className="grid size-12 shrink-0 place-items-center rounded-button border-[1.5px] border-border bg-surface text-primary" onClick={() => onShare(certificate)} type="button"><Icon name="share" size={20}/></button>
+    </div>
+  </Card>;
 }
 
-function CertificateCard({ certificate, mode, onShare }: { certificate: Certificate; mode: DisplayMode; onShare: (certificate: Certificate) => void }) {
-  const rbinSegments = certificate.rbin.split("/");
-  const rbinPrefix = rbinSegments.length > 2 ? `${rbinSegments.slice(0, -2).join("/")}/` : "";
-  const rbinSuffix = rbinSegments.slice(-2).join("/");
-  return <article className="min-w-0 rounded-[14px] border border-[#e0e2e2] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,.03)] min-[800px]:p-5">
-    {mode === "grid" ? <div className="relative grid h-[155px] place-content-center justify-items-center rounded-[10px] bg-[#e9f8f0] text-[#155c3a] min-[800px]:h-[190px]"><svg aria-hidden="true" fill="none" height="45" viewBox="0 0 48 48" width="45"><circle cx="24" cy="19" r="13" stroke="currentColor" strokeWidth="3"/><path d="M16 30v15l8-4 8 4V30" fill="currentColor"/><path d="m24 10 2.5 6h6l-5 4 2 6-5.5-3.5L18.5 26l2-6-5-4h6z" fill="currentColor"/></svg><strong className="mt-3 text-[13px]">Certificate of Compliance</strong><span className="absolute right-2 bottom-2 rounded-full bg-[#242424] px-2 py-1 text-[10px] font-bold text-white">{certificate.revoked ? "REVOKED" : "ISSUED"}</span></div> : null}
-    <div className={`${mode === "grid" ? "mt-4" : ""} flex items-start justify-between gap-3`}><span className="rounded-full bg-[#f3f5f4] px-3 py-[7px] text-[12px] font-semibold text-[#65707e]">{certificate.year}</span><span className="rounded-full bg-[#e9f8f0] px-3 py-[7px] text-[12px] font-semibold text-[#1e7651]">{certificate.revoked ? "Revoked" : "Issued"}</span></div>
-    <h2 className="mt-5 text-[21px] leading-[1.25] font-bold min-[800px]:text-[23px]">Certificate of Compliance</h2>
-    {mode === "grid" ? <p className="mt-2 text-[16px] text-[#66717e]">{certificate.documentType}</p> : null}
-    <dl className="mt-4 grid grid-cols-2 gap-3 rounded-[10px] bg-[#f4f6f5] p-3 text-[13px]"><div className="min-w-0"><dt className="text-[#66717e]">RBIN</dt><dd className="mt-1 font-semibold leading-[1.5] text-[#155c3a]"><span className="inline-block max-w-full break-all">{rbinPrefix}</span><span className="inline-block max-w-full break-all">{rbinSuffix}</span></dd></div><div><dt className="text-[#66717e]">Date Issued</dt><dd className="mt-1 font-semibold text-[#155c3a]">{certificate.issuedAt}</dd></div></dl>
-    <div className="mt-4 flex gap-2"><Link className={`grid min-h-[54px] min-w-0 flex-1 place-items-center rounded-[10px] bg-[#0d5b38] px-3 text-center text-[16px] font-semibold text-white ${focusClass}`} href={`/certificates/${certificate.id}`}>View Certificate</Link><button aria-label={`Share certificate ${certificate.rbin}`} className={`grid size-[54px] shrink-0 place-items-center rounded-[10px] border border-[#dce1df] bg-white text-[#0d5b38] ${focusClass}`} onClick={() => onShare(certificate)} type="button"><ShareIcon/></button></div>
-  </article>;
-}
-
-export function CertificatesList({ certificates, error, loading = false }: { certificates: Certificate[]; error: string | null; loading?: boolean }) {
+/** mobile (tabs)/certificates. Cards become a two-column grid from 800px in grid view. */
+export function CertificatesList({ certificates, error }: { certificates: Certificate[]; error: string | null }) {
   const router = useRouter();
-  const [messageTone, setMessageTone] = useState<NoticeTone>("success");
-  const [mode, setMode] = useState<DisplayMode>("grid");
-  const [message, setMessage] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [status, setStatus] = useState<{ message: string; tone: NoticeTone } | null>(null);
 
   async function share(certificate: Certificate) {
-    const url = new URL(verificationPath(certificate.rbin), window.location.origin).href;
-    setMessage("");
-    setMessageTone("success");
+    const url = verificationUrlFor(certificate.rbin);
+    const text = `NBA Certificate of Compliance ${certificate.certificateNumber}, RBIN ${certificate.rbin}.`;
+    setStatus(null);
     try {
-      if (navigator.share) {
-        await navigator.share({ title: "Certificate verification", text: `Verify certificate ${certificate.rbin}.`, url });
-        setMessage("Verification link shared.");
-      } else {
-        await navigator.clipboard.writeText(url);
-        setMessage("Verification link copied.");
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: "Certificate verification", text, url });
+        return;
       }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      setMessageTone("error");
-      setMessage("Could not share the verification link. Please try again.");
+      await navigator.clipboard.writeText(`${text} Verify at ${url}`);
+      setStatus({ message: "Verification link copied.", tone: "success" });
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      setStatus({ message: "Could not share the verification link. Please try again.", tone: "error" });
     }
   }
 
-  return <TransactionShell activeNavigation="certificates" showNavigation><main className="mx-auto max-w-[1080px] px-4 pt-6 pb-[calc(100px+env(safe-area-inset-bottom))] min-[800px]:px-7 min-[800px]:pt-10">
-    <h1 className="font-serif text-[29px] leading-[1.2] font-bold min-[800px]:text-[39px]">My Certificates</h1>
-    <p className="mt-2 max-w-[700px] text-[16px] leading-[1.45] text-[#66717e]">View and download your official Certificates of Compliance.</p>
-    <div aria-label="Certificate display" className="mt-5 inline-flex rounded-[10px] bg-[#f4f6f5] p-1" role="group">{(["grid", "list"] as const).map((item) => <button aria-pressed={mode === item} className={`flex min-h-[42px] items-center gap-2 rounded-[8px] border-0 px-4 text-[16px] ${focusClass} ${mode === item ? "bg-white font-semibold text-[#24272a] shadow-sm" : "bg-transparent text-[#66717e]"}`} key={item} onClick={() => setMode(item)} type="button"><ViewIcon mode={item}/>{item === "grid" ? "Grid" : "List"}</button>)}</div>
-    <div aria-live="polite" className={`mt-5 grid gap-4 ${mode === "grid" ? "min-[800px]:grid-cols-2" : ""}`}>{loading ? <FormNotice tone="info">Loading your certificates…</FormNotice> : error ? <div><FormNotice tone="error">{error}</FormNotice><button className={`mt-4 rounded-[10px] bg-[#0d5b38] px-4 py-3 font-semibold text-white ${focusClass}`} onClick={() => router.refresh()} type="button">Try again</button></div> : certificates.length ? certificates.map((certificate) => <CertificateCard certificate={certificate} key={certificate.id} mode={mode} onShare={share}/>) : <p className="rounded-xl border border-[#e0e2e2] bg-white p-6 text-[#66717e]">No certificates have been issued to your account yet.</p>}</div>
-    {message ? <div className="fixed right-4 bottom-[85px] left-4 z-30 mx-auto max-w-[450px]"><FormNotice tone={messageTone}>{message}</FormNotice></div> : null}
-  </main></TransactionShell>;
+  if (error) return <Screen wide>{heading}<ErrorState action={<Button onClick={() => router.refresh()} variant="outline">Try again</Button>} body={error}/></Screen>;
+
+  if (!certificates.length) {
+    return <Screen wide>{heading}<EmptyState action={<ButtonLink href="/transactions">View transactions</ButtonLink>} body="A Certificate of Compliance is issued once your branch verifies your client's payment. Upload the payment slip on a transaction to start that process." icon="verified" title="No certificates yet"/></Screen>;
+  }
+
+  return <Screen wide>
+    {heading}
+    <div aria-label="Certificate display" className="mb-4 inline-flex gap-1 rounded-input bg-surface-muted p-1" role="group">
+      <ViewModeOption icon="grid-view" label="Grid" onSelect={() => setViewMode("grid")} selected={viewMode === "grid"}/>
+      <ViewModeOption icon="view-list" label="List" onSelect={() => setViewMode("list")} selected={viewMode === "list"}/>
+    </div>
+    <div className={`grid gap-3 ${viewMode === "grid" ? "min-[800px]:grid-cols-2" : ""}`}>{certificates.map((certificate) => <CertificateCard certificate={certificate} compact={viewMode === "list"} key={certificate.id} onShare={share}/>)}</div>
+    {status ? <Notice className="mt-3" tone={status.tone}>{status.message}</Notice> : null}
+    <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-border-strong p-4 text-center">
+      <Icon color="var(--color-text-muted)" name="history" size={26}/>
+      <p className="text-label text-text-muted">Looking for older certificates? Request archive access.</p>
+      <Link className="text-label font-bold text-primary" href="/profile/help">Request Archive</Link>
+    </div>
+  </Screen>;
 }

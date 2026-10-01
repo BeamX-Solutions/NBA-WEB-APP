@@ -1,5 +1,8 @@
 export type PractitionerProfile = {
   avatarUrl: string | null;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankName: string;
   branchId: string | null;
   branchName: string;
   branchState: string | null;

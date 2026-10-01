@@ -33,7 +33,6 @@ export function validateInvoiceInput(input: {
   amount: string;
   documentId: string;
   parties: string;
-  poaBasis: string;
 }): { data: ValidatedInvoiceInput | null; fieldErrors: InvoiceFieldErrors } {
   const fieldErrors: InvoiceFieldErrors = {};
   const document = documentById(input.documentId);
@@ -41,9 +40,7 @@ export function validateInvoiceInput(input: {
   const parties = input.parties.trim();
 
   if (!document || !(document.id in databaseDocumentTypes)) fieldErrors.document = "Select a valid document or transaction type.";
-  if (document?.requiresPropertyTransfer && input.poaBasis !== "property-transfer") {
-    fieldErrors.poaBasis = "Confirm that this instrument forms part of a property assignment or conveyance.";
-  }
+  else if (document.scale === "discretionary") fieldErrors.document = `${document.label} is not covered by Scale 4, so no invoice can be generated for it.`;
   if (amountKobo === null) fieldErrors.amount = "Enter an amount above ₦0 and no more than ₦1 trillion.";
   if (!parties) fieldErrors.parties = "Enter the parties to the document.";
   else if (parties.length > 160) fieldErrors.parties = "Parties to the document must be 160 characters or fewer.";
@@ -71,6 +68,18 @@ export function safeInvoiceErrorMessage(error: unknown): string {
   }
   if (message.includes("profile not found")) {
     return "Your practitioner profile is not available. Contact your branch administrator.";
+  }
+  if (message.includes("administrator accounts")) {
+    return "Administrator accounts cannot create invoices. Use a practitioner account.";
+  }
+  if (message.includes("approved your membership")) {
+    return "Your branch has not approved your membership yet, so you cannot create an invoice.";
+  }
+  if (message.includes("bank details")) {
+    return "Add your bank details in Edit Profile before creating an invoice. Your branch sends your fee to that account.";
+  }
+  if (message.includes("branch fee does not match")) {
+    return "The fee could not be confirmed. Recalculate and try again.";
   }
   if (message.includes("not currently active") || message.includes("branch") && message.includes("activation")) {
     return "Your branch is not currently active for invoice issuance. You can continue to use the fee calculator.";

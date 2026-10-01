@@ -3,13 +3,16 @@ import test from "node:test";
 import { canSubmitProof, money, parseTransaction } from "./contracts.ts";
 import { submitProof, validateProofContent, type ProofSubmissionPorts } from "./proof.ts";
 
-const row = { id: "c78a74c3-1324-42bd-8a86-6287e1d22bd7", status: "awaiting_payment", invoice_number: "TXN-00012-DOA", document_type: "deed_of_assignment", consideration: "1500000000", amount_payable: "3000000", calculations: { professional_fee: "150000000" }, created_at: "2026-09-27T14:00:00Z", parties: "Client One to Client Two" };
+const row = { id: "c78a74c3-1324-42bd-8a86-6287e1d22bd7", status: "awaiting_payment", invoice_number: "TXN-00012-DOA", document_type: "deed_of_assignment", consideration: "1500000000", amount_payable: "150000000", branch_fee: "3000000", due_to_practitioner: "147000000", remitted_at: null, remitted_to: null, remittance_reference: null, created_at: "2026-09-27T14:00:00Z", parties: "Client One to Client Two" };
 const identity = { name: "Test Practitioner", scn: "SCN/TEST" };
 
-test("live records keep professional fees separate from branch payable and use owned identity", () => {
+test("live records carry the client-pays-through-branch split and use owned identity", () => {
   const result = parseTransaction(row, identity)!;
-  assert.equal(result.amountPayable, "₦30,000");
-  assert.equal(result.professionalFee, "₦1,500,000");
+  assert.equal(result.amountPayable, "₦1,500,000");
+  assert.equal(result.branchFee, "₦30,000");
+  assert.equal(result.dueToPractitioner, "₦1,470,000");
+  assert.equal(result.hasDueToPractitioner, true);
+  assert.equal(result.remittance, null);
   assert.equal(result.practitioner, identity.name);
   assert.equal(result.scn, identity.scn);
   assert.equal(result.status, "awaiting");
@@ -19,6 +22,13 @@ test("live records keep professional fees separate from branch payable and use o
   assert.equal(parseTransaction({ ...row, status: "unknown" }, identity), null);
   assert.equal(parseTransaction({ ...row, status: "constructor" }, identity), null);
   assert.equal(parseTransaction({ ...row, document_type: "power_of_attorney" }, identity)?.documentType, "Irrevocable Power of Attorney");
+});
+
+test("a recorded remittance is shown only when complete", () => {
+  const remitted = parseTransaction({ ...row, status: "verified", remitted_at: "2026-09-29T09:00:00Z", remitted_to: "Ada Okafor, 0123456789, Zenith Bank", remittance_reference: "FT123" }, identity)!;
+  assert.deepEqual(remitted.remittance, { remittedOn: "29 September 2026", account: "Ada Okafor, 0123456789, Zenith Bank", reference: "FT123" });
+  assert.equal(parseTransaction({ ...row, remitted_at: "2026-09-29T09:00:00Z" }, identity)!.remittance, null);
+  assert.equal(parseTransaction({ ...row, due_to_practitioner: "0" }, identity)!.hasDueToPractitioner, false);
 });
 
 test("unsafe database money is never rounded or treated as a payment amount", () => {
