@@ -8,7 +8,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       initialError={auth_error === "link" ? "This sign-in link is invalid or expired. Please try again." : ""}
       initialSuccess={auth_notice === "password-updated" ? "Password updated. Log in with your new password." : ""}
     />
-    {/* First visit only, as mobile shows its slides before the login screen. */}
+    {/* First-visit onboarding adapts to mobile, tablet, and desktop screens. */}
     <Onboarding/>
   </>;
 }
