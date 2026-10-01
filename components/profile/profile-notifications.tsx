@@ -53,6 +53,6 @@ export function ProfileNotifications() {
       </div>)}
     </Card>
     {notice ? <Notice className="mt-3" tone={notice.tone}>{notice.message}</Notice> : null}
-    <p className="mt-4 text-center text-caption leading-[17px] text-text-muted">Push delivery is not enabled yet, so these preferences are saved on this device only. They will apply once notifications are switched on.</p>
+    <p className="mt-4 text-center text-caption leading-[17px] text-text-muted">Notifications always appear in your inbox, under the bell at the top. These preferences are saved on this device only, and will choose which ones are also emailed once email notifications are switched on.</p>
   </Screen>;
 }
