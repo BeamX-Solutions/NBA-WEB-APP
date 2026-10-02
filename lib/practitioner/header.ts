@@ -1,15 +1,15 @@
 import "server-only";
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getServerClient, getSessionUser } from "@/lib/supabase/request";
 
 export type HeaderIdentity = { signedIn: boolean; avatarUrl: string | null; unreadCount: number };
 
 /** What the app header shows on the right: the bell, the practitioner's photo, or a way to log in. Cached per request. */
 export const loadHeaderIdentity = cache(async (): Promise<HeaderIdentity> => {
   try {
-    const client = await createClient();
-    const { data: { user } } = await client.auth.getUser();
+    const user = await getSessionUser();
     if (!user) return { signedIn: false, avatarUrl: null, unreadCount: 0 };
+    const client = await getServerClient();
     const [profile, unread] = await Promise.all([
       client.from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
       // RLS limits this to the practitioner's own; a failed count shows no badge rather than an error.

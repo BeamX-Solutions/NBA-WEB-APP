@@ -1,11 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { InstallBanner } from "@/components/pwa/install-banner";
+import { Suspense, type ReactNode } from "react";
 import { unreadBadge } from "@/lib/notifications/contracts";
 import { loadHeaderIdentity } from "@/lib/practitioner/header";
 import { Icon } from "./icon";
-import { BottomTabBar, HeaderTabs } from "./tab-nav";
+import { HeaderTabs } from "./tab-nav";
 
 /** The bell beside the profile photo, with the unread count as a badge. */
 function NotificationBell({ unreadCount }: { unreadCount: number }) {
@@ -16,44 +15,54 @@ function NotificationBell({ unreadCount }: { unreadCount: number }) {
   </Link>;
 }
 
+/** The right of the header once the session is read: bell and photo, or a "Log in" pill. */
+async function HeaderIdentity() {
+  const { signedIn, avatarUrl, unreadCount } = await loadHeaderIdentity();
+  if (!signedIn) return <Link className="flex items-center gap-1 rounded-full bg-primary px-3 py-2 text-label font-semibold text-text-inverse hover:bg-primary-pressed" href="/login"><Icon name="login" size={18}/>Log in</Link>;
+  return <>
+    <NotificationBell unreadCount={unreadCount}/>
+    <Link aria-label="Profile" className="grid size-[38px] place-items-center overflow-hidden rounded-full bg-surface-muted text-text-muted" href="/profile">
+      {avatarUrl ? <Image alt="" className="size-[38px] object-cover" height={38} src={avatarUrl} width={38}/> : <Icon name="person" size={22}/>}
+    </Link>
+  </>;
+}
+
+/** Same footprint as HeaderIdentity, so nothing shifts when it arrives. */
+function HeaderIdentityFallback() {
+  return <>
+    <span aria-hidden="true" className="grid size-[38px] place-items-center text-text-disabled"><Icon name="notifications-none" size={24}/></span>
+    <span aria-hidden="true" className="size-[38px] rounded-full bg-surface-muted"/>
+  </>;
+}
+
+/** The header tabs, for a page that may or may not have a session (the public verification pages). */
+async function SessionHeaderTabs() {
+  const { signedIn } = await loadHeaderIdentity();
+  return signedIn ? <HeaderTabs/> : null;
+}
+
 /**
  * mobile AppHeader: the seal on the left and, on the right, the notification bell and the
  * practitioner's photo or, signed out, a "Log in" pill. No title or back arrow, as on mobile;
  * each screen renders its own heading.
+ *
+ * Only the identity reads wait, behind Suspense, so the header itself appears at once. Inside the
+ * practitioner layout the session is already established, so the tabs render without waiting.
  */
-async function AppHeader() {
-  const { signedIn, avatarUrl, unreadCount } = await loadHeaderIdentity();
-  return <header className="sticky top-0 z-30 border-b border-border bg-background">
+export function AppHeader({ practitioner = false }: { practitioner?: boolean }) {
+  return <header className="sticky top-0 z-30 border-b border-border bg-background standalone-phone:shrink-0">
     <div className="mx-auto flex max-w-[1040px] items-center gap-4 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-3">
-      <Link aria-label="Home" href={signedIn ? "/" : "/login"}><Image alt="" className="size-9 object-contain" height={36} priority src="/nba-seal.png" width={36}/></Link>
-      <div className="flex flex-1 justify-center">{signedIn ? <HeaderTabs/> : null}</div>
-      {signedIn ? <NotificationBell unreadCount={unreadCount}/> : null}
-      {signedIn ? <Link aria-label="Profile" className="grid size-[38px] place-items-center overflow-hidden rounded-full bg-surface-muted text-text-muted" href="/profile">
-        {avatarUrl ? <Image alt="" className="size-[38px] object-cover" height={38} src={avatarUrl} width={38}/> : <Icon name="person" size={22}/>}
-      </Link> : <Link className="flex items-center gap-1 rounded-full bg-primary px-3 py-2 text-label font-semibold text-text-inverse hover:bg-primary-pressed" href="/login"><Icon name="login" size={18}/>Log in</Link>}
+      <Link aria-label="Home" href="/"><Image alt="" className="size-9 object-contain" height={36} priority src="/nba-seal.png" width={36}/></Link>
+      <div className="flex flex-1 justify-center">{practitioner ? <HeaderTabs/> : <Suspense fallback={null}><SessionHeaderTabs/></Suspense>}</div>
+      <div className="flex items-center gap-4"><Suspense fallback={<HeaderIdentityFallback/>}><HeaderIdentity/></Suspense></div>
     </div>
   </header>;
 }
 
 /**
- * Header, content and (on the four tab screens) the bottom tab bar. Pushed screens such as a
- * transaction's detail carry the header only, as on mobile.
- *
- * In the installed app on a phone (standalone-phone) a tab screen is a fixed-height frame instead:
- * the header on top, the content scrolling in between, and the tab bar in normal flow at the
- * bottom, so nothing is position: fixed for iOS to move. Browsers keep the document scrolling.
+ * Header over content, for pages outside the practitioner layout: the public verification pages,
+ * which work signed in or out. The practitioner screens get theirs once, from app/(practitioner)/layout.
  */
-export async function AppShell({ children, tabs = false }: { children: ReactNode; tabs?: boolean }) {
-  const { signedIn } = await loadHeaderIdentity();
-  if (!tabs || !signedIn) {
-    return <div className="min-h-screen bg-background"><AppHeader/>{children}</div>;
-  }
-  return <div className="min-h-screen bg-background standalone-phone:flex standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:flex-col" data-tab-shell="">
-    <AppHeader/>
-    <div className="pb-[calc(76px+env(safe-area-inset-bottom))] min-[800px]:pb-0 standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:overflow-y-auto standalone-phone:overscroll-contain standalone-phone:pb-0">
-      <InstallBanner/>
-      {children}
-    </div>
-    <BottomTabBar/>
-  </div>;
+export function AppShell({ children }: { children: ReactNode }) {
+  return <div className="min-h-screen bg-background"><AppHeader/>{children}</div>;
 }

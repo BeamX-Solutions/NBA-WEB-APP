@@ -1,7 +1,6 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSession } from "@/lib/supabase/request";
 import { formatProfileDateTime } from "@/lib/profile/format";
 import type { PractitionerProfile, PractitionerSubscription, ProfileLoadResult } from "@/lib/profile/types";
 
@@ -71,9 +70,7 @@ function parseSubscription(value: unknown): PractitionerSubscription | null {
 }
 
 export async function loadProfilePageData(nextPath: string): Promise<ProfileLoadResult> {
-  const client = await createClient();
-  const { data: { user }, error: userError } = await client.auth.getUser();
-  if (userError || !user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  const { client, user } = await requireSession(nextPath);
 
   const [profileResult, subscriptionResult] = await Promise.all([
     client
@@ -108,4 +105,10 @@ export async function loadProfilePageData(nextPath: string): Promise<ProfileLoad
     },
     error: null,
   };
+}
+
+/** Security only shows how the practitioner signs in, which the session already holds: no database read. */
+export async function loadAccount(): Promise<{ email: string; lastSignedIn: string }> {
+  const { user } = await requireSession("/profile/security");
+  return { email: user.email ?? "Unavailable", lastSignedIn: formatProfileDateTime(user.last_sign_in_at) };
 }

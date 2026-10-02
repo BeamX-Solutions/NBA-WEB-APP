@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { changePasswordAction, type SecurityActionState } from "@/app/profile/security/actions";
+import { changePasswordAction, type SecurityActionState } from "@/app/(practitioner)/profile/security/actions";
 import { Button } from "@/components/mobile/button";
 import { Card } from "@/components/mobile/card";
 import { TextField } from "@/components/mobile/field";

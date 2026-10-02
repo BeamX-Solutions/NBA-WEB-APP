@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { markNotificationsReadAction } from "@/app/notifications/actions";
+import { markNotificationsReadAction } from "@/app/(practitioner)/notifications/actions";
 import { Button } from "@/components/mobile/button";
 import { Card } from "@/components/mobile/card";
 import { Icon } from "@/components/mobile/icon";

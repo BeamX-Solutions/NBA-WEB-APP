@@ -2,7 +2,7 @@
 
 /*
  * The installed app on a phone, where the bottom tab bar exists. There the tab screens are a
- * fixed-height frame (see AppShell), because iOS moves position: fixed elements while the
+ * fixed-height frame (see components/mobile/practitioner-frame.tsx), because iOS moves position: fixed elements while the
  * document scrolls in an installed web app.
  */
 @custom-variant standalone-phone (@media (display-mode: standalone) and (max-width: 799px));

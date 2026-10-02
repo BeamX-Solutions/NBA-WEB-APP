@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { updateProfileAction, type ProfileActionState } from "@/app/profile/edit/actions";
+import { updateProfileAction, type ProfileActionState } from "@/app/(practitioner)/profile/edit/actions";
 import { Button } from "@/components/mobile/button";
 import { Card } from "@/components/mobile/card";
 import { SelectField, TextField } from "@/components/mobile/field";

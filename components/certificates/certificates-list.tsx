@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { loadMoreCertificatesAction } from "@/app/(practitioner)/certificates/actions";
 import { Badge } from "@/components/mobile/badge";
 import { Button, ButtonLink } from "@/components/mobile/button";
 import { Card } from "@/components/mobile/card";
@@ -10,6 +11,7 @@ import { Icon } from "@/components/mobile/icon";
 import { Screen, ScreenHeading } from "@/components/mobile/screen";
 import { EmptyState, ErrorState, Notice, type NoticeTone } from "@/components/mobile/states";
 import { verificationUrlFor } from "@/lib/certificates/contracts";
+import type { CertificatePage } from "@/lib/certificates/data";
 import type { Certificate } from "@/lib/certificates/types";
 
 type ViewMode = "grid" | "list";
@@ -42,11 +44,34 @@ function CertificateCard({ certificate, compact, onShare }: { certificate: Certi
   </Card>;
 }
 
-/** mobile (tabs)/certificates. Cards become a two-column grid from 800px in grid view. */
-export function CertificatesList({ certificates, error }: { certificates: Certificate[]; error: string | null }) {
+/**
+ * mobile (tabs)/certificates. Cards become a two-column grid from 800px in grid view. The server
+ * sends the first page; Load more fetches the next from the database.
+ */
+export function CertificatesList({ initial }: { initial: CertificatePage }) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [status, setStatus] = useState<{ message: string; tone: NoticeTone } | null>(null);
+  const [certificates, setCertificates] = useState(initial.certificates);
+  const [cursor, setCursor] = useState(initial.nextCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const error = initial.error;
+
+  async function loadMore() {
+    if (!cursor) return;
+    setLoadingMore(true);
+    setStatus(null);
+    try {
+      const page = await loadMoreCertificatesAction(cursor);
+      if (page.error) { setStatus({ message: page.error, tone: "error" }); return; }
+      setCertificates((current) => [...current, ...page.certificates]);
+      setCursor(page.nextCursor);
+    } catch {
+      setStatus({ message: "More certificates could not be loaded. Check your connection and try again.", tone: "error" });
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function share(certificate: Certificate) {
     const url = verificationUrlFor(certificate.rbin);
@@ -78,6 +103,7 @@ export function CertificatesList({ certificates, error }: { certificates: Certif
       <ViewModeOption icon="view-list" label="List" onSelect={() => setViewMode("list")} selected={viewMode === "list"}/>
     </div>
     <div className={`grid gap-3 ${viewMode === "grid" ? "min-[800px]:grid-cols-2" : ""}`}>{certificates.map((certificate) => <CertificateCard certificate={certificate} compact={viewMode === "list"} key={certificate.id} onShare={share}/>)}</div>
+    {cursor ? <div className="mt-3"><Button loading={loadingMore} onClick={loadMore} variant="outline">Load More Certificates</Button></div> : null}
     {status ? <Notice className="mt-3" tone={status.tone}>{status.message}</Notice> : null}
     <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-border-strong p-4 text-center">
       <Icon color="var(--color-text-muted)" name="history" size={26}/>

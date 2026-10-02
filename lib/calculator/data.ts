@@ -1,7 +1,6 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSession } from "@/lib/supabase/request";
 import type { CalculatorBranch, CalculatorContext, CalculatorSubscription } from "@/lib/calculator/types";
 import { firstNameOf } from "@/lib/names";
 
@@ -66,9 +65,7 @@ function displayNames(fullName: string): Pick<CalculatorContext, "displayName" |
 }
 
 export async function loadCalculatorContext(): Promise<CalculatorContext> {
-  const client = await createClient();
-  const { data: { user }, error: userError } = await client.auth.getUser();
-  if (userError || !user) redirect("/login?next=%2F");
+  const { client, user } = await requireSession("/");
 
   const [profileResult, subscriptionResult] = await Promise.all([
     client
