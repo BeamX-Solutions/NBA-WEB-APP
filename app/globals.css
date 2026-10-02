@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 /*
+ * The installed app on a phone, where the bottom tab bar exists. There the tab screens are a
+ * fixed-height frame (see AppShell), because iOS moves position: fixed elements while the
+ * document scrolls in an installed web app.
+ */
+@custom-variant standalone-phone (@media (display-mode: standalone) and (max-width: 799px));
+
+/*
  * Design tokens, copied from the practitioner mobile app (mobile/theme/tokens.ts) so the two
  * clients read as one product. Screens use these through Tailwind: bg-primary, text-body,
  * rounded-card, font-heading. Spacing uses Tailwind's 4px scale, which matches mobile's
@@ -61,6 +68,11 @@
   /* Installed app: no rubber-band bounce, which drags the fixed tab bar on iOS. Browsers keep pull-to-refresh. */
   @media (display-mode: standalone) {
     html, body { overscroll-behavior-y: none; }
+  }
+  /* Only while a tab shell is on the page: other screens keep normal document scrolling. */
+  @media (display-mode: standalone) and (max-width: 799px) {
+    html:has([data-tab-shell]) { height: 100%; overflow: hidden; }
+    html:has([data-tab-shell]) body { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
   }
   ::selection { background: var(--color-primary-surface); color: var(--color-primary-pressed); }
 }

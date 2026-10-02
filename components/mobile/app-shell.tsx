@@ -38,13 +38,22 @@ async function AppHeader() {
 /**
  * Header, content and (on the four tab screens) the bottom tab bar. Pushed screens such as a
  * transaction's detail carry the header only, as on mobile.
+ *
+ * In the installed app on a phone (standalone-phone) a tab screen is a fixed-height frame instead:
+ * the header on top, the content scrolling in between, and the tab bar in normal flow at the
+ * bottom, so nothing is position: fixed for iOS to move. Browsers keep the document scrolling.
  */
 export async function AppShell({ children, tabs = false }: { children: ReactNode; tabs?: boolean }) {
   const { signedIn } = await loadHeaderIdentity();
-  return <div className="min-h-screen bg-background">
+  if (!tabs || !signedIn) {
+    return <div className="min-h-screen bg-background"><AppHeader/>{children}</div>;
+  }
+  return <div className="min-h-screen bg-background standalone-phone:flex standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:flex-col" data-tab-shell="">
     <AppHeader/>
-    {tabs && signedIn ? <InstallBanner/> : null}
-    <div className={tabs && signedIn ? "pb-[calc(76px+env(safe-area-inset-bottom))] min-[800px]:pb-0" : ""}>{children}</div>
-    {tabs && signedIn ? <BottomTabBar/> : null}
+    <div className="pb-[calc(76px+env(safe-area-inset-bottom))] min-[800px]:pb-0 standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:overflow-y-auto standalone-phone:overscroll-contain standalone-phone:pb-0">
+      <InstallBanner/>
+      {children}
+    </div>
+    <BottomTabBar/>
   </div>;
 }
