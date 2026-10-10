@@ -11,6 +11,7 @@ async function assertSingleA4(blob: Blob): Promise<void> {
   const page = pdf.getPage(0);
   assert.ok(Math.abs(page.getWidth() - 595.28) < 0.01);
   assert.ok(Math.abs(page.getHeight() - 841.89) < 0.01);
+  assert.ok(page.getWidth() < page.getHeight(), "page must be portrait");
 }
 
 const invoice: InvoicePdfData = {
@@ -32,7 +33,7 @@ test("invoice renders as one A4 page, with or without branch bank details", asyn
   await assertSingleA4(await createInvoicePdf({ ...invoice, accountName: null, accountNumber: null, bankName: null }, assets));
 });
 
-test("certificate renders as one A4 page, revoked or not, with a signature image or without", async () => {
+test("downloaded certificate renders as one A4 portrait page, revoked or not, with a signature image or without", async () => {
   const assets = await loadPdfAssets();
   await assertSingleA4(await createCertificatePdf(certificate, assets));
   await assertSingleA4(await createCertificatePdf({ ...certificate, revoked: true, chairman: null, signature: assets.seal }, assets));
