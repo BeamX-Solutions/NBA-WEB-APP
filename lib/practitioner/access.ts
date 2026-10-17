@@ -3,8 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /**
  * Who may use the practitioner app, mirroring the mobile root navigator.
  *
- * Navigation, not security: create_transaction and RLS refuse administrators and
- * unapproved members whatever this decides.
+ * A branch administrator practises too and is treated as a member here; only a super administrator,
+ * who belongs to no branch, is turned away.
+ *
+ * Navigation, not security: create_transaction and RLS refuse super administrators and unapproved
+ * members whatever this decides.
  */
 export type PractitionerAccess =
   | { kind: "practitioner" }
@@ -14,17 +17,17 @@ export type PractitionerAccess =
 
 export const MEMBERSHIP_PATH = "/membership";
 export const ACCOUNT_UNAVAILABLE_PATH = "/account-unavailable";
-/** Where an administrator lands once their session has been ended. Public: it needs no session. */
+/** Where a super administrator lands once their session has been ended. Public: it needs no session. */
 export const ADMINISTRATOR_PATH = "/administrator-account";
 /** The login page carrying mobile's refusal, which the administrator screen leads back to. */
 export const ADMINISTRATOR_LOGIN_PATH = "/login?auth_error=administrator";
 
 /** mobile lib/auth-context ADMIN_REJECTION. */
 export const ADMINISTRATOR_REJECTION =
-  "This is an administrator account. Administrators sign in on the web console. " +
-  "If you also practise, sign in here with your practitioner account.";
+  "This is a super administrator account, which belongs to no branch. " +
+  "Super administrators sign in on the web console.";
 
-const administratorRoles = new Set(["branch_admin", "super_admin"]);
+const administratorRoles = new Set(["super_admin"]);
 
 type AccessRow = { role?: unknown; membership_status?: unknown };
 
@@ -38,7 +41,7 @@ export function accessFor(row: AccessRow | null): PractitionerAccess {
 
 /**
  * Where a request for `pathname` should go instead, or null to let it through.
- * Administrators are sent to their own page; the caller must end their session first.
+ * Super administrators are sent to their own page; the caller must end their session first.
  */
 export function redirectFor(access: PractitionerAccess, pathname: string): string | null {
   if (access.kind === "administrator") return ADMINISTRATOR_PATH;

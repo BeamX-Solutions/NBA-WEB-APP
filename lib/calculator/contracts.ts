@@ -69,6 +69,9 @@ export function safeInvoiceErrorMessage(error: unknown): string {
   if (message.includes("profile not found")) {
     return "Your practitioner profile is not available. Contact your branch administrator.";
   }
+  if (message.includes("super administrator account")) {
+    return "A super administrator account cannot create invoices.";
+  }
   if (message.includes("administrator accounts")) {
     return "Administrator accounts cannot create invoices. Use a practitioner account.";
   }

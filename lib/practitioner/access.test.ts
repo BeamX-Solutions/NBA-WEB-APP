@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { accessFor, redirectFor } from "./access.ts";
 
-test("administrators are turned away whatever their membership", () => {
-  assert.deepEqual(accessFor({ role: "branch_admin", membership_status: "pending" }), { kind: "administrator" });
+test("a super administrator is turned away whatever their membership", () => {
   assert.deepEqual(accessFor({ role: "super_admin" }), { kind: "administrator" });
+  assert.deepEqual(accessFor({ role: "super_admin", membership_status: "approved" }), { kind: "administrator" });
+});
+
+test("a branch administrator practises and is routed like a member", () => {
+  assert.deepEqual(accessFor({ role: "branch_admin", membership_status: "approved" }), { kind: "practitioner" });
+  assert.deepEqual(accessFor({ role: "branch_admin", membership_status: "pending" }), { kind: "membership" });
 });
 
 test("members are practitioners only once approved", () => {
