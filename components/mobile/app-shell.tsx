@@ -22,7 +22,7 @@ async function HeaderIdentity() {
   return <>
     <NotificationBell unreadCount={unreadCount}/>
     <Link aria-label="Profile" className="grid size-[38px] place-items-center overflow-hidden rounded-full bg-surface-muted text-text-muted" href="/profile">
-      {avatarUrl ? <Image alt="" className="size-[38px] object-cover" height={38} src={avatarUrl} width={38}/> : <Icon name="person" size={22}/>}
+      {avatarUrl ? <Image alt="" className="size-[38px] object-cover" height={38} src={avatarUrl} unoptimized width={38}/> : <Icon name="person" size={22}/>}
     </Link>
   </>;
 }

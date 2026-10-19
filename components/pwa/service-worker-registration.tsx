@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 /**
- * Registers public/sw.js in production builds. Development skips it, so a cached worker never hides
+ * Registers /sw.js (app/sw.js/route.ts) in production builds. Development skips it, so a cached worker never hides
  * code changes; set NEXT_PUBLIC_ENABLE_SW=true to try it under `next dev`.
  */
 export function ServiceWorkerRegistration() {

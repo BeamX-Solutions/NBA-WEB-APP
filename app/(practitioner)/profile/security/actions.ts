@@ -30,5 +30,9 @@ export async function changePasswordAction(_previous: SecurityActionState, formD
 
   const { error } = await client.auth.updateUser({ current_password: currentPassword, password });
   if (error) return { fieldErrors: {}, message: friendlyAuthError(error, "change-password"), status: "error" };
-  return { fieldErrors: {}, message: "Password updated successfully.", status: "success" };
+
+  // A password is usually changed because another device is not trusted, so end every session but this one.
+  const { error: signOutError } = await client.auth.signOut({ scope: "others" });
+  if (signOutError) return { fieldErrors: {}, message: "Password updated. Other devices could not be signed out and stay signed in until their sessions expire.", status: "success" };
+  return { fieldErrors: {}, message: "Password updated successfully. Other devices have been signed out.", status: "success" };
 }

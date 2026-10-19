@@ -1,5 +1,7 @@
 import "server-only";
 import { cache } from "react";
+import { avatarDisplayUrl } from "@/lib/profile/avatar";
+import { supabaseConfig } from "@/lib/supabase/config";
 import { getServerClient, getSessionUser } from "@/lib/supabase/request";
 
 export type HeaderIdentity = { signedIn: boolean; avatarUrl: string | null; unreadCount: number };
@@ -11,11 +13,12 @@ export const loadHeaderIdentity = cache(async (): Promise<HeaderIdentity> => {
     if (!user) return { signedIn: false, avatarUrl: null, unreadCount: 0 };
     const client = await getServerClient();
     const [profile, unread] = await Promise.all([
-      client.from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
+      client.from("profiles").select("avatar_url, updated_at").eq("id", user.id).maybeSingle(),
       // RLS limits this to the practitioner's own; a failed count shows no badge rather than an error.
       client.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null),
     ]);
-    const avatarUrl = typeof profile.data?.avatar_url === "string" && profile.data.avatar_url ? profile.data.avatar_url : null;
+    const version = typeof profile.data?.updated_at === "string" ? profile.data.updated_at : null;
+    const avatarUrl = avatarDisplayUrl(profile.data?.avatar_url, supabaseConfig().url, version);
     return { signedIn: true, avatarUrl, unreadCount: unread.error ? 0 : unread.count ?? 0 };
   } catch {
     return { signedIn: false, avatarUrl: null, unreadCount: 0 };
