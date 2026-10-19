@@ -2,6 +2,8 @@
  * Ported from the practitioner mobile app (mobile/lib/fees), which is the source of truth, so both
  * clients quote the same figure for the same transaction. Bands are marginal and summed exactly in
  * kobo, then rounded once, half up. This pure module also verifies server-side transaction creation.
+ * The database has the same bands in public.professional_fee_for, which create_transaction enforces;
+ * a change to any band must be made there and on mobile too.
  */
 
 export type ScaleCode = "4A" | "4B" | "4C";
