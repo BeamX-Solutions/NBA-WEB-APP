@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { SignOutDialog } from "@/components/auth/sign-out-dialog";
 import { Badge } from "@/components/mobile/badge";
 import { Button, ButtonLink } from "@/components/mobile/button";
 import { Card } from "@/components/mobile/card";
-import { ConfirmDialog } from "@/components/mobile/confirm-dialog";
 import { DetailList, DetailRow, Screen, SectionTitle, SettingsRow } from "@/components/mobile/screen";
 import { Notice } from "@/components/mobile/states";
 import { ProfileAvatar } from "@/components/profile/avatar";
@@ -81,10 +81,10 @@ export function ProfileOverview({ profile, subscription }: { profile: Practition
           <SettingsRow href="/profile/security" icon="security" label="Security"/>
           <SettingsRow href="/profile/help" icon="help-outline" label="Help & Support"/>
         </Card>
-        <div className="mt-2"><Button onClick={() => setConfirming(true)} variant="danger">Log Out</Button></div>
+        <div className="mt-2"><Button onClick={() => setConfirming(true)} variant="outline">Sign out</Button></div>
         {message ? <Notice tone="error">{message}</Notice> : null}
       </div>
     </div>
-    {confirming ? <ConfirmDialog body="You will need your email and password to sign in again. Any certificates already issued stay available once you return." busy={signingOut} cancelLabel="Stay signed in" confirmLabel="Log out" destructive onCancel={() => setConfirming(false)} onConfirm={signOut} title="Log out?"/> : null}
+    {confirming ? <SignOutDialog busy={signingOut} onCancel={() => setConfirming(false)} onConfirm={signOut}/> : null}
   </Screen>;
 }
