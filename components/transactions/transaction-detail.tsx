@@ -91,8 +91,9 @@ function ShareCard({ transaction }: { transaction: TransactionRecord }) {
   const { remittance } = transaction;
   return <Card className="mb-4">
     <SectionTitle icon="account-balance-wallet">Your share</SectionTitle>
-    {remittance ? <DetailList><DetailRow emphasise label="Sent to you" value={remittance.remittedOn}/><DetailRow label="Account" value={remittance.account}/>{remittance.reference ? <DetailRow label="Transfer reference" value={remittance.reference}/> : null}</DetailList>
-      : <p className="text-body leading-[21px] text-text-muted">The branch has verified your client&apos;s payment and will send {transaction.dueToPractitioner} to the account in your profile. This shows the date once they record the transfer.</p>}
+    {remittance ? <><DetailList><DetailRow emphasise label="Sent to you" value={remittance.remittedOn}/><DetailRow label="Account" value={remittance.account}/>{remittance.reference ? <DetailRow label="Transfer reference" value={remittance.reference}/> : null}</DetailList>
+      {transaction.hasReceipt ? <a className="mt-3 flex items-center gap-2 text-label font-semibold text-primary" href={`/payments/receipt/${transaction.id}`} rel="noopener" target="_blank"><Icon name="receipt" size={18}/>View transfer receipt</a> : null}</>
+      : <p className="text-body leading-[21px] text-text-muted">The branch has verified your client&apos;s payment and will send {transaction.dueToPractitioner} to the account in your profile. This shows the date and the bank&apos;s receipt once they record the transfer.</p>}
   </Card>;
 }
 

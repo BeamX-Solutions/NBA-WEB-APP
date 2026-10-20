@@ -6,7 +6,7 @@ import { parseTransaction, type TransactionRecord } from "./contracts";
 import { invoiceColumns, parseInvoice, type InvoiceRecord } from "./invoice";
 import { searchFilter, type TransactionFilters } from "./search";
 
-const transactionColumns = "id, invoice_number, document_type, consideration, amount_payable, branch_fee, due_to_practitioner, remitted_at, remitted_to, remittance_reference, parties, status, rbin, rejection_reason, created_at";
+const transactionColumns = "id, invoice_number, document_type, consideration, amount_payable, branch_fee, due_to_practitioner, remitted_at, remitted_to, remittance_reference, payout_id, parties, status, rbin, rejection_reason, created_at";
 const loadError = "Your transactions could not be loaded. Refresh the page and try again.";
 const readError = "A transaction could not be read. Contact your branch before making a payment.";
 

@@ -106,6 +106,12 @@ export function TransactionsList({ initial }: { initial: TransactionPage }) {
 
   return <Screen wide>
     {heading}
+    {/* Where the money is: the client paying the branch and the branch paying you, invoice by invoice. */}
+    <Link className="mb-3 flex items-center gap-3 rounded-card border border-border bg-surface p-3 hover:border-border-strong" href="/payments">
+      <Icon color="var(--color-primary)" name="payments" size={22}/>
+      <span className="min-w-0 flex-1"><span className="block text-body font-semibold text-text">Payments</span><span className="block text-caption text-text-muted">What your branch has paid you, with receipts</span></span>
+      <Icon color="var(--color-text-disabled)" name="chevron-right" size={22}/>
+    </Link>
     <div className="min-[800px]:grid min-[800px]:grid-cols-2 min-[800px]:gap-3">
       <label className="mb-3 flex items-center gap-2 rounded-input border border-border-strong bg-surface px-3 focus-within:outline-3 focus-within:outline-primary/35">
         <Icon color="var(--color-text-muted)" name="search" size={20}/>

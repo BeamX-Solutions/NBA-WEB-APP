@@ -2,7 +2,7 @@ import { DOCUMENT_TYPES, formatNaira } from "../fees/legal-fees.ts";
 import { databaseDocumentTypes, isUuid } from "../calculator/contracts.ts";
 import type { TransactionStatus } from "./sample-transactions.ts";
 
-/** The branch's record of sending the practitioner their share. Moves no money; set only by record_remittance. */
+/** The branch's record of sending the practitioner their share. Moves no money; set only by record_payout. */
 export type Remittance = {
   remittedOn: string;
   account: string;
@@ -24,6 +24,8 @@ export type TransactionRecord = {
   /** True once there is anything for the branch to send on. */
   hasDueToPractitioner: boolean;
   remittance: Remittance | null;
+  /** True once the payout that settled it is on record, with the bank's receipt. */
+  hasReceipt: boolean;
   practitioner: string;
   scn: string;
   rbin?: string;
@@ -93,6 +95,7 @@ export function parseTransaction(value: unknown, identity: { name: string; scn: 
     dueToPractitioner: due === null ? "Unavailable" : formatNaira(due),
     hasDueToPractitioner: due !== null && due > 0n,
     remittance: parseRemittance(row),
+    hasReceipt: isUuid(row.payout_id),
     practitioner: identity.name,
     scn: identity.scn,
     rbin: text(row.rbin) ?? undefined,

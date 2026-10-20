@@ -3,7 +3,7 @@ import test from "node:test";
 import { canSubmitProof, money, parseTransaction } from "./contracts.ts";
 import { submitProof, validateProofContent, type ProofSubmissionPorts } from "./proof.ts";
 
-const row = { id: "c78a74c3-1324-42bd-8a86-6287e1d22bd7", status: "awaiting_payment", invoice_number: "TXN-00012-DOA", document_type: "deed_of_assignment", consideration: "1500000000", amount_payable: "150000000", branch_fee: "3000000", due_to_practitioner: "147000000", remitted_at: null, remitted_to: null, remittance_reference: null, created_at: "2026-09-27T14:00:00Z", parties: "Client One to Client Two" };
+const row = { id: "c78a74c3-1324-42bd-8a86-6287e1d22bd7", status: "awaiting_payment", invoice_number: "TXN-00012-DOA", document_type: "deed_of_assignment", consideration: "1500000000", amount_payable: "150000000", branch_fee: "3000000", due_to_practitioner: "147000000", remitted_at: null, remitted_to: null, remittance_reference: null, payout_id: null, created_at: "2026-09-27T14:00:00Z", parties: "Client One to Client Two" };
 const identity = { name: "Test Practitioner", scn: "SCN/TEST" };
 
 test("live records carry the client-pays-through-branch split and use owned identity", () => {
@@ -13,6 +13,8 @@ test("live records carry the client-pays-through-branch split and use owned iden
   assert.equal(result.dueToPractitioner, "₦1,470,000");
   assert.equal(result.hasDueToPractitioner, true);
   assert.equal(result.remittance, null);
+  assert.equal(result.hasReceipt, false);
+  assert.equal(parseTransaction({ ...row, payout_id: "9b1d1f8e-2c4a-4f7e-9a51-0d6c1e2b3a4f" }, identity)!.hasReceipt, true);
   assert.equal(result.practitioner, identity.name);
   assert.equal(result.scn, identity.scn);
   assert.equal(result.status, "awaiting");
