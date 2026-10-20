@@ -37,7 +37,7 @@ function FeeBreakdown({ calculation, offline, onInvoice }: { calculation: Calcul
   const { document, fee } = calculation;
   return <div aria-live="polite">
     <p className="text-caption text-text-muted">{document.fullRateParty}</p>
-    <strong className="block font-heading text-display leading-tight font-bold text-primary">{formatNaira(fee.professionalFeeKobo)}</strong>
+    <strong className="block font-heading text-display leading-tight font-bold text-primary [font-variant-numeric:lining-nums]">{formatNaira(fee.professionalFeeKobo)}</strong>
     <p className="mt-1 text-caption text-text-muted">Scale {fee.scale} - {document.label}</p>
     <div className="my-3 h-px bg-border"/>
     {fee.lines.map((line) => <Row key={line.label} label={line.label} labelClass="text-label text-text-muted" value={formatNaira(line.amountKobo)} valueClass="text-label font-medium text-text"/>)}
