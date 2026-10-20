@@ -79,6 +79,6 @@ export function LoginForm({ initialError = "", initialSuccess = "" }: { initialE
       <AuthFooterLink href="/register" prefix="Don't have an account?" text="Register here"/>
     </Card>
     <p className="mt-6 text-center text-caption tracking-[0.5px] text-text-muted">{ATTRIBUTION}</p>
-    <p className="mt-1 text-center text-caption text-text-disabled">{PRODUCT_TAGLINE}</p>
+    <p className="mt-1 text-center text-caption text-text-muted">{PRODUCT_TAGLINE}</p>
   </AuthScreen>;
 }

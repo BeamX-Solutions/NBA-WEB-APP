@@ -24,7 +24,7 @@ function NotificationRow({ notification, onOpen, disabled }: { notification: App
           {notification.read ? null : <span aria-label="Unread" className="mt-[7px] size-2 shrink-0 rounded-full bg-primary" role="img"/>}
         </span>
         <span className="mt-1 block text-label leading-[19px] text-text-muted">{notification.body}</span>
-        <span className="mt-1 block text-caption text-text-disabled">{notification.when}</span>
+        <span className="mt-1 block text-caption text-text-muted">{notification.when}</span>
       </span>
     </button>
   </li>;

@@ -69,7 +69,7 @@ export function Onboarding() {
           <p className="mt-3 text-body-lg leading-6 text-text-muted">{slide.body}</p>
         </div>
         <div className="mt-auto flex flex-col gap-4 px-6 pt-6 pb-[max(16px,env(safe-area-inset-bottom))] min-[800px]:mt-8 min-[800px]:px-0 min-[800px]:pt-0">
-          <div className="flex justify-center gap-2">{slides.map((item, dot) => <button aria-current={dot === index ? "step" : undefined} aria-label={`Slide ${dot + 1} of ${slides.length}`} className={`h-2 rounded-full border-0 p-0 transition-all ${dot === index ? "w-[22px] bg-primary" : "w-2 bg-border-strong"}`} key={item.title} onClick={() => setIndex(dot)} type="button"/>)}</div>
+          <div className="flex justify-center">{slides.map((item, dot) => <button aria-current={dot === index ? "step" : undefined} aria-label={`Slide ${dot + 1} of ${slides.length}`} className="grid h-6 place-items-center border-0 bg-transparent px-2" key={item.title} onClick={() => setIndex(dot)} type="button"><span className={`block h-2 rounded-full transition-all ${dot === index ? "w-[22px] bg-primary" : "w-2 bg-border-strong"}`}/></button>)}</div>
           <Button onClick={() => (isLast ? finish() : setIndex(index + 1))}>{isLast ? "Get started" : "Next"}</Button>
           <p className="text-center text-caption text-text-muted">{PRODUCT_NAME} - {ATTRIBUTION}</p>
         </div>

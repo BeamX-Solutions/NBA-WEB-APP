@@ -74,7 +74,7 @@ export function SelectField({ defaultValue = "", disabled = false, error, hideLa
   return <Field error={error} hideLabel={hideLabel} hint={hint} htmlFor={id} label={label}>
     {name ? <input name={name} type="hidden" value={current}/> : null}
     <button aria-describedby={describedBy(id, error, hint)} aria-expanded={open} aria-haspopup="dialog" className={`${controlClass(error, disabled)} w-full justify-between text-left`} disabled={disabled} id={id} onClick={() => setOpen(true)} ref={triggerRef} type="button">
-      <span className={`min-w-0 flex-1 truncate text-body-lg ${selected ? "text-text" : "text-text-disabled"} ${disabled ? "text-text-muted" : ""}`}>{selected?.label ?? placeholder}</span>
+      <span className={`min-w-0 flex-1 truncate text-body-lg ${selected ? "text-text" : "text-text-muted"} ${disabled ? "text-text-muted" : ""}`}>{selected?.label ?? placeholder}</span>
       <Icon color={disabled ? "var(--color-text-disabled)" : "var(--color-text-muted)"} name="expand-more" size={22}/>
     </button>
     {open ? <SelectSheet label={label} onClose={() => { setOpen(false); triggerRef.current?.focus(); }} onSelect={choose} options={options} selected={current}/> : null}

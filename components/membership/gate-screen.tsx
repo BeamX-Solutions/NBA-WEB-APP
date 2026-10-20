@@ -14,7 +14,7 @@ export function GateScreen({ children, icon, title }: { children: ReactNode; ico
       <IconCircle icon={icon} tone={icon === "error-outline" ? "danger" : "success"}/>
       <h1 className="m-0 font-heading text-title font-bold text-text">{title}</h1>
       <div className="w-full">{children}</div>
-      <p className="mt-8 text-caption text-text-disabled">{PRODUCT_NAME}</p>
+      <p className="mt-8 text-caption text-text-muted">{PRODUCT_NAME}</p>
     </div>
   </main>;
 }
