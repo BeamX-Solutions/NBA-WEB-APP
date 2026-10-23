@@ -41,7 +41,7 @@ export function verificationPath(rbin: string): string {
  * Host of the public verification page printed into certificate QR codes. Shared with mobile
  * (EXPO_PUBLIC_VERIFICATION_URL) and must not change once real certificates are issued.
  */
-export const DEFAULT_VERIFICATION_BASE_URL = "https://nba-mobile-app.vercel.app";
+export const DEFAULT_VERIFICATION_BASE_URL = "https://nbacalculator.app";
 
 export function verificationBaseUrl(value: string | undefined = process.env.NEXT_PUBLIC_VERIFICATION_URL): string {
   try {
