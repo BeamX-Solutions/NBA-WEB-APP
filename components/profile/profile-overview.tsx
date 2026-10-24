@@ -13,6 +13,7 @@ import { friendlyAuthError } from "@/lib/auth/errors";
 import { formatNaira } from "@/lib/fees/legal-fees";
 import { formatProfileDate, labelEnum } from "@/lib/profile/format";
 import type { PractitionerProfile, PractitionerSubscription } from "@/lib/profile/types";
+import { canRenew, renewalOpensAt } from "@/lib/subscriptions/renewal";
 import { createClient } from "@/lib/supabase/client";
 
 function SubscriptionCard({ subscription }: { subscription: PractitionerSubscription | null }) {
@@ -27,8 +28,16 @@ function SubscriptionCard({ subscription }: { subscription: PractitionerSubscrip
         <DetailRow label="Expiry Date" value={formatProfileDate(active.expiresAt)}/>
       </DetailList>
     </> : <p className="text-body leading-[22px] text-text-muted">You do not have an active subscription. Fee calculations remain free. A subscription is required to generate invoices and certificates.</p>}
-    <div className="mt-4"><ButtonLink href="/profile/plans">{active ? "Renew Now" : "Choose a Plan"}</ButtonLink></div>
+    <SubscriptionAction active={active}/>
   </Card>;
+}
+
+/** Renewal is offered only in the last 7 days (lib/subscriptions/renewal). */
+function SubscriptionAction({ active }: { active: PractitionerSubscription | null }) {
+  if (!active) return <div className="mt-4"><ButtonLink href="/profile/plans">Choose a Plan</ButtonLink></div>;
+  if (canRenew(active.expiresAt)) return <div className="mt-4"><ButtonLink href="/profile/plans">Renew Now</ButtonLink></div>;
+  const opens = renewalOpensAt(active.expiresAt);
+  return <p className="mt-4 text-label text-text-muted">You can renew from {opens ? formatProfileDate(opens.toISOString()) : "7 days before it expires"}.</p>;
 }
 
 /** mobile (tabs)/profile. From 800px the details sit beside subscription and settings. */
