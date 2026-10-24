@@ -5,8 +5,8 @@
  * ₦300,000. Every plan buys the same thing; only the term differs. Entitlement is granted by a
  * payment webhook on the server, never by this screen.
  *
- * These amounts are only what the app displays. When Paystack is wired, the price charged must be
- * set by the server, never taken from this file, or a client could choose what it pays.
+ * These amounts are only what the app displays. The price charged is the database's
+ * (public.subscription_price, NBA APP migration 20261025100000); keep the two the same.
  */
 export type PlanOption = { id: "monthly" | "quarterly" | "yearly"; name: string; amountKobo: bigint; perMonthHint: string; highlighted?: boolean };
 
