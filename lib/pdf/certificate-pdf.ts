@@ -27,6 +27,15 @@ const SHEET = 20;
 const LEFT = SHEET + 22.5;
 const RIGHT = W - SHEET - 22.5;
 const CONTENT = RIGHT - LEFT;
+const VALUE_X = LEFT + 163;
+const BODY_TOP = H - SHEET - 19.5;
+/** The top of the QR code, the tallest part of the foot. */
+const FOOT_TOP = SHEET + 93;
+const FOOT_CLEARANCE = 24;
+const MAX_ROW_EXTRA = 8;
+const MAX_SECTION_EXTRA = 24;
+/** Header to title, title to recital, recital to particulars, particulars to note, note to foot. */
+const SECTION_GAPS = 5;
 const deep = hex("#123d24");
 const ink = hex("#14301f");
 const soft = hex("#40503f");
@@ -80,22 +89,67 @@ async function embedSignature(canvas: Canvas, bytes: Uint8Array | null): Promise
   return null;
 }
 
-function drawParticulars(canvas: Canvas, data: CertificatePdfData, top: number): number {
+/**
+ * Extra points added to each particular row and each gap between sections, plus the offset that
+ * centres the body (title to note) between the header and the foot once those are capped.
+ */
+type Spacing = { row: number; section: number; centre: number };
+
+function recitalLines(fonts: Canvas["fonts"]): string[] {
+  return wrap(CERTIFICATE_RECITAL, fonts.sans, 9.4, CONTENT - 21);
+}
+
+function particularLines(fonts: Canvas["fonts"], value: string): string[] {
+  return wrap(value, fonts.bold, 8.6, RIGHT - VALUE_X);
+}
+
+function noteText(data: CertificatePdfData): string {
+  const host = data.verificationUrl.split("/verify/")[0];
+  return `${CERTIFICATE_NOTE} It can be checked independently: scan the code below, or enter the RBIN at ${host}. A printed copy proves nothing on its own.`;
+}
+
+function noteLines(fonts: Canvas["fonts"], data: CertificatePdfData): string[] {
+  return wrap(noteText(data), fonts.sans, 7.9, CONTENT - 30);
+}
+
+/** The body's height with no extra spacing, from the top of the sheet to below the note. */
+function bodyHeight(fonts: Canvas["fonts"], data: CertificatePdfData): number {
+  const rows = certificateParticulars(data).reduce((sum, { value }) => sum + 16 + (particularLines(fonts, value).length - 1) * 12, 0);
+  const banner = data.revoked ? 27 : 0;
+  return banner + 56 + 100 + 20 + recitalLines(fonts).length * 16.4 + 2 + rows + 26 + (noteLines(fonts, data).length - 1) * 12.6 + 3;
+}
+
+/** Shares the height left above the foot between the rows and section gaps (both capped), then centres. */
+function spacingFor(fonts: Canvas["fonts"], data: CertificatePdfData): Spacing {
+  const spare = BODY_TOP - bodyHeight(fonts, data) - FOOT_TOP - FOOT_CLEARANCE;
+  if (spare <= 0) return { row: 0, section: 0, centre: 0 };
+  const rows = certificateParticulars(data).length;
+  const row = Math.min(MAX_ROW_EXTRA, spare / (rows + SECTION_GAPS));
+  const section = Math.min(MAX_SECTION_EXTRA, (spare - row * rows) / SECTION_GAPS);
+  return { row, section, centre: (spare - row * rows - section * SECTION_GAPS) / 2 };
+}
+
+/** The space left between the body and the foot once the spacing is applied, and the spacing itself; for tests. */
+export function footGap(fonts: Canvas["fonts"], data: CertificatePdfData): Spacing & { gap: number } {
+  const spacing = spacingFor(fonts, data);
+  const used = spacing.row * certificateParticulars(data).length + spacing.section * (SECTION_GAPS - 1) + spacing.centre;
+  return { ...spacing, gap: BODY_TOP - bodyHeight(fonts, data) - used - FOOT_TOP };
+}
+
+function drawParticulars(canvas: Canvas, data: CertificatePdfData, top: number, rowExtra: number): number {
   const { page, fonts } = canvas;
   const style = { font: fonts.bold, size: 8.6, color: ink };
-  const valueX = LEFT + 163;
-  const valueWidth = RIGHT - valueX;
   let y = top;
   certificateParticulars(data).forEach(({ label, value }, index) => {
-    y -= 16;
+    y -= 16 + rowExtra;
     drawLeft(page, `${index + 1}.`, LEFT, y, style);
     drawLeft(page, label, LEFT + 15, y, { ...style, size: fitSize(label, fonts.bold, 136, 8.6, 7) });
     drawLeft(page, ":", LEFT + 154, y, style);
-    const lines = wrap(value, fonts.bold, 8.6, valueWidth);
+    const lines = particularLines(fonts, value);
     lines.forEach((line, lineIndex) => {
       const baseline = y - lineIndex * 12;
-      drawLeft(page, line, valueX, baseline, style);
-      page.drawLine({ start: { x: valueX, y: baseline - 3 }, end: { x: RIGHT, y: baseline - 3 }, thickness: 0.6, color: hex("#9d8b5f"), dashArray: [1, 1.6] });
+      drawLeft(page, line, VALUE_X, baseline, style);
+      page.drawLine({ start: { x: VALUE_X, y: baseline - 3 }, end: { x: RIGHT, y: baseline - 3 }, thickness: 0.6, color: hex("#9d8b5f"), dashArray: [1, 1.6] });
     });
     y -= (lines.length - 1) * 12;
   });
@@ -137,6 +191,7 @@ export async function createCertificatePdf(data: CertificatePdfData, assets: Pdf
   const { page, fonts, seal } = canvas;
   const qr = await canvas.pdf.embedPng(await QRCode.toBuffer(data.verificationUrl, { type: "png", margin: 0, width: 264, errorCorrectionLevel: "M", color: { dark: "#14301f", light: "#fbf7ef" } }));
   const signature = await embedSignature(canvas, data.signature);
+  const spacing = spacingFor(fonts, data);
 
   drawFrame(page);
   const watermarkCenter = H - (SHEET + 0.52 * (H - 2 * SHEET));
@@ -146,7 +201,7 @@ export async function createCertificatePdf(data: CertificatePdfData, assets: Pdf
   drawCorner(page, true, true);
   drawCorner(page, false, true);
 
-  let y = H - SHEET - 19.5;
+  let y = BODY_TOP;
   if (data.revoked) {
     page.drawRectangle({ x: LEFT, y: y - 18, width: CONTENT, height: 18, color: hex("#8d2318") });
     drawSpaced(page, "REVOKED", W / 2, y - 12.5, 3.75, { font: fonts.bold, size: 9.8, color: hex("#ffffff") as RGB });
@@ -159,21 +214,20 @@ export async function createCertificatePdf(data: CertificatePdfData, assets: Pdf
   drawCentered(page, "NIGERIAN BAR ASSOCIATION", W / 2, y - 22, { font: fonts.serif, size: fitSize("NIGERIAN BAR ASSOCIATION", fonts.serif, titleWidth, 20, 14), color: deep });
   const branchLine = data.branch.replace(/^NBA\s+/i, "").toUpperCase();
   drawSpaced(page, branchLine, W / 2, y - 38, 3.75, { font: fonts.bold, size: fitSize(branchLine, fonts.bold, titleWidth - branchLine.length * 3.75, 10.5, 6.5), color: deep });
-  y -= 56;
+  y -= 56 + spacing.section + spacing.centre;
 
   drawStarRule(page, y - 4);
   drawCentered(page, "CERTIFICATE OF", W / 2, y - 32, { font: fonts.serif, size: 25, color: deep });
   drawCentered(page, "COMPLIANCE", W / 2, y - 58, { font: fonts.serif, size: 25, color: deep });
   drawStarRule(page, y - 76);
-  y -= 100;
+  y -= 100 + spacing.section;
 
   drawSpaced(page, "THIS IS TO CERTIFY THAT", W / 2, y, 1, { font: fonts.serif, size: 10.5, color: ink });
   y = drawWrapped(page, CERTIFICATE_RECITAL, { x: LEFT + 10.5, y: y - 20, width: CONTENT - 21, leading: 16.4, align: "center", font: fonts.sans, size: 9.4, color: ink });
 
-  y = drawParticulars(canvas, data, y - 2);
+  y = drawParticulars(canvas, data, y - 2 - spacing.section, spacing.row);
 
-  const host = data.verificationUrl.split("/verify/")[0];
-  drawWrapped(page, `${CERTIFICATE_NOTE} It can be checked independently: scan the code below, or enter the RBIN at ${host}. A printed copy proves nothing on its own.`, { x: LEFT + 15, y: y - 26, width: CONTENT - 30, leading: 12.6, align: "center", font: fonts.sans, size: 7.9, color: soft });
+  drawWrapped(page, noteText(data), { x: LEFT + 15, y: y - 26 - spacing.section, width: CONTENT - 30, leading: 12.6, align: "center", font: fonts.sans, size: 7.9, color: soft });
 
   drawFoot(canvas, data, qr, signature);
   return toPdfBlob(canvas.pdf);

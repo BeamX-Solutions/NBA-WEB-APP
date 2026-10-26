@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
 import { loadPdfAssets } from "./assets.ts";
-import { createCertificatePdf, type CertificatePdfData } from "./certificate-pdf.ts";
+import { createCertificatePdf, footGap, type CertificatePdfData } from "./certificate-pdf.ts";
+import { createCanvas } from "./kit.ts";
 import { createInvoicePdf, type InvoicePdfData } from "./invoice-pdf.ts";
 
 async function assertSingleA4(blob: Blob): Promise<void> {
@@ -40,6 +41,15 @@ test("downloaded certificate renders as one A4 portrait page, revoked or not, wi
   await assertSingleA4(await createCertificatePdf(certificate, assets));
   await assertSingleA4(await createCertificatePdf({ ...certificate, revoked: true, chairman: null, signature: assets.seal }, assets));
   await assertSingleA4(await createCertificatePdf({ ...certificate, propertyDescription: null }, assets));
+});
+
+test("a short certificate centres its body between header and foot; a long one still clears the foot", async () => {
+  const { fonts } = await createCanvas(await loadPdfAssets());
+  const short = { ...certificate, parties: "Chinedu Okafor to Adeola Properties Ltd", propertyDescription: "Plot 14, Block C, Ikota Layout, Lekki, Lagos State" };
+  const layout = footGap(fonts, short);
+  assert.ok(layout.gap <= 150, "short certificate leaves a large gap above the foot");
+  assert.ok(Math.abs(layout.gap - 24 - layout.section - layout.centre) < 0.01, "body is not centred between header and foot");
+  for (const data of [certificate, { ...certificate, revoked: true }]) assert.ok(footGap(fonts, data).gap >= 0, "body overlaps the foot");
 });
 
 test("an unreadable signature falls back to the printed name rather than failing", async () => {
