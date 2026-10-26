@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { certificateParticulars } from "./wording.ts";
 import { DEFAULT_VERIFICATION_BASE_URL, normalizeRbin, parseCertificate, parseVerification, rbinFromSegments, verificationBaseUrl, verificationPath, verificationUrlFor } from "./contracts.ts";
 
 const id = "b18c2bad-bfcb-40d5-b7d0-1c6ea836a3d6";
@@ -61,4 +62,14 @@ test("verification URLs match mobile's verificationUrlFor and fall back to the s
   assert.equal(verificationUrlFor(row.transactions.rbin, "https://nba-mobile-app.vercel.app"), "https://nba-mobile-app.vercel.app/verify/NBA%2FANAOCHA%2F0002%2F2026");
   assert.equal(verificationBaseUrl("https://verify.example.org/"), "https://verify.example.org");
   for (const value of [undefined, "", "not a url", "javascript:alert(1)", "ftp://example.org"]) assert.equal(verificationBaseUrl(value), DEFAULT_VERIFICATION_BASE_URL);
+});
+
+test("the description of property is particular 4 when drawn, and absent on older certificates", () => {
+  const withDescription = parseCertificate({ ...row, transactions: { ...row.transactions, property_description: "Plot 14, Block C, Ikota Layout" } }, identity)!;
+  assert.equal(withDescription.propertyDescription, "Plot 14, Block C, Ikota Layout");
+  assert.deepEqual(certificateParticulars(withDescription)[4], { label: "DESCRIPTION OF PROPERTY", value: "Plot 14, Block C, Ikota Layout" });
+  assert.equal(certificateParticulars(withDescription).length, 7);
+  const older = parseCertificate(row, identity)!;
+  assert.equal(older.propertyDescription, null);
+  assert.deepEqual(certificateParticulars(older).map((particular) => particular.label), ["NAME OF LAWYER", "RBIN", "SUPREME COURT NUMBER", "PARTIES TO THE DOCUMENT", "TYPE OF DOCUMENT", "CONSIDERATION"]);
 });

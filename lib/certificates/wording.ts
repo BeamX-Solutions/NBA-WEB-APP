@@ -10,6 +10,8 @@ export type CertificateFacts = {
   rbin: string;
   scn: string;
   parties: string;
+  /** Null on transactions drawn before the field existed; the particular is left out. */
+  propertyDescription: string | null;
   documentType: string;
   consideration: string;
 };
@@ -22,6 +24,7 @@ export function certificateParticulars(facts: CertificateFacts): Particular[] {
     { label: "RBIN", value: facts.rbin },
     { label: "SUPREME COURT NUMBER", value: facts.scn },
     { label: "PARTIES TO THE DOCUMENT", value: facts.parties },
+    ...(facts.propertyDescription ? [{ label: "DESCRIPTION OF PROPERTY", value: facts.propertyDescription }] : []),
     { label: "TYPE OF DOCUMENT", value: facts.documentType },
     { label: "CONSIDERATION", value: facts.consideration },
   ];

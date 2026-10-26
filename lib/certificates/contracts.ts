@@ -75,7 +75,7 @@ export function parseCertificate(value: unknown, identity: { name: string; scn: 
   return {
     id: row.id, year: issued.year, rbin, certificateNumber: number, issuedAt: issued.date, issuedOn: issued.long,
     documentType: document, practitioner: identity.name, scn: identity.scn,
-    parties, consideration, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
+    parties, propertyDescription: text(transaction.property_description), consideration, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
     chairmanSignaturePath: text(branch.chairman_signature_url),
     revoked: row.revoked_at !== null, revocationReason: text(row.revocation_reason),
   };

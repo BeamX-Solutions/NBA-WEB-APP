@@ -11,6 +11,8 @@ export type Certificate = {
   practitioner: string;
   scn: string;
   parties: string;
+  /** Null on transactions drawn before the field existed. */
+  propertyDescription: string | null;
   consideration: string;
   branch: string;
   chairman: string;
