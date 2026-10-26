@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/supabase/request";
 import { parseCertificate } from "./contracts";
 import type { Certificate } from "./types";
 
-const columns = "id, transaction_id, certificate_number, issued_at, revoked_at, revocation_reason, transactions!inner(user_id, status, rbin, parties, document_type, consideration, branches!transactions_branch_id_fkey(name, chairman_name, chairman_signature_url))";
+const columns = "id, transaction_id, certificate_number, issued_at, revoked_at, revocation_reason, transactions!inner(user_id, status, rbin, parties, property_description, document_type, consideration, branches!transactions_branch_id_fkey(name, chairman_name, chairman_signature_url))";
 const loadError = "Your certificates could not be loaded. Refresh the page and try again.";
 const identityError = "Your practitioner details are unavailable. Contact your branch administrator.";
 const readError = "A certificate could not be read. Please contact your branch administrator.";

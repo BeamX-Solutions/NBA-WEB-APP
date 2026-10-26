@@ -6,7 +6,7 @@ import { A4, createCanvas, drawCentered, drawLeft, drawSpaced, drawWrapped, fitS
 
 /**
  * The Certificate of Compliance, following mobile/lib/pdf.ts certificateHtml: gold double frame on
- * cream, corner flourishes, a faint seal watermark, six numbered particulars on dotted leaders, the
+ * cream, corner flourishes, a faint seal watermark, the numbered particulars on dotted leaders, the
  * QR code, and the chairman's block. The QR and the RBIN it carries are what a registry checks; the
  * printed document proves nothing on its own.
  */

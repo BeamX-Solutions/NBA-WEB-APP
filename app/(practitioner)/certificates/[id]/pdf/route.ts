@@ -42,6 +42,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const [signature, assets] = await Promise.all([loadSignature(certificate.chairmanSignaturePath), loadPdfAssets()]);
     const pdf = await createCertificatePdf({
       practitioner: certificate.practitioner, rbin: certificate.rbin, scn: certificate.scn, parties: certificate.parties,
+      propertyDescription: certificate.propertyDescription,
       documentType: certificate.documentType, consideration: certificate.consideration, certificateNumber: certificate.certificateNumber,
       issuedOn: certificate.issuedOn, branch: certificate.branch, chairman: certificate.chairman === "Unavailable" ? null : certificate.chairman,
       signature, revoked: certificate.revoked, verificationUrl: verificationUrlFor(certificate.rbin),

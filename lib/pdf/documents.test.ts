@@ -22,6 +22,7 @@ const invoice: InvoicePdfData = {
 
 const certificate: CertificatePdfData = {
   practitioner: "Test Practitioner", rbin: "NBA/AN/2026/00042", scn: "SCN/TEST", parties: "A very long list of parties ".repeat(6).trim(),
+  propertyDescription: "All that piece of land known as Plot 14, Block C, Ikota Layout, Lekki, Lagos State, measuring approximately 600 square metres. ".repeat(4).slice(0, 500),
   documentType: "Deed of Assignment", consideration: "₦60,000,000", certificateNumber: "NBA/AN/CC/2026/0042", issuedOn: "30 September 2026",
   branch: "NBA Anaocha Branch", chairman: "Test Chairman", signature: null, revoked: false,
   verificationUrl: "https://nba-mobile-app.vercel.app/verify/NBA%2FAN%2F2026%2F00042",
@@ -38,6 +39,7 @@ test("downloaded certificate renders as one A4 portrait page, revoked or not, wi
   const assets = await loadPdfAssets();
   await assertSingleA4(await createCertificatePdf(certificate, assets));
   await assertSingleA4(await createCertificatePdf({ ...certificate, revoked: true, chairman: null, signature: assets.seal }, assets));
+  await assertSingleA4(await createCertificatePdf({ ...certificate, propertyDescription: null }, assets));
 });
 
 test("an unreadable signature falls back to the printed name rather than failing", async () => {
