@@ -23,6 +23,7 @@ export type ValidatedInvoiceInput = {
   databaseDocumentType: DatabaseDocumentType;
   document: DocumentType;
   parties: string;
+  propertyDescription: string;
 };
 
 export function documentById(id: string): DocumentType | null {
@@ -33,17 +34,21 @@ export function validateInvoiceInput(input: {
   amount: string;
   documentId: string;
   parties: string;
+  propertyDescription: string;
 }): { data: ValidatedInvoiceInput | null; fieldErrors: InvoiceFieldErrors } {
   const fieldErrors: InvoiceFieldErrors = {};
   const document = documentById(input.documentId);
   const amountKobo = parseNairaToKobo(input.amount);
   const parties = input.parties.trim();
+  const propertyDescription = input.propertyDescription.trim();
 
   if (!document || !(document.id in databaseDocumentTypes)) fieldErrors.document = "Select a valid document or transaction type.";
   else if (document.scale === "discretionary") fieldErrors.document = `${document.label} is not covered by Scale 4, so no invoice can be generated for it.`;
   if (amountKobo === null) fieldErrors.amount = "Enter an amount above ₦0 and no more than ₦1 trillion.";
   if (!parties) fieldErrors.parties = "Enter the parties to the document.";
   else if (parties.length > 160) fieldErrors.parties = "Parties to the document must be 160 characters or fewer.";
+  if (!propertyDescription) fieldErrors.propertyDescription = "Describe the property.";
+  else if (propertyDescription.length > 500) fieldErrors.propertyDescription = "Description of Property must be 500 characters or fewer.";
 
   if (Object.keys(fieldErrors).length > 0 || !document || amountKobo === null) return { data: null, fieldErrors };
 
@@ -53,6 +58,7 @@ export function validateInvoiceInput(input: {
       databaseDocumentType: databaseDocumentTypes[document.id as keyof typeof databaseDocumentTypes],
       document,
       parties,
+      propertyDescription,
     },
     fieldErrors: {},
   };

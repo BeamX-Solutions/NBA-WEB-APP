@@ -87,6 +87,8 @@ export function InvoiceFlow({ calculation, context, onBack }: { calculation: Cal
   );
   const [parties, setParties] = useState("");
   const [partiesError, setPartiesError] = useState("");
+  const [propertyDescription, setPropertyDescription] = useState("");
+  const [propertyDescriptionError, setPropertyDescriptionError] = useState("");
   const block = blockFor(context);
   const { amountKobo, document, fee } = calculation;
 
@@ -98,9 +100,14 @@ export function InvoiceFlow({ calculation, context, onBack }: { calculation: Cal
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (pending || submittingRef.current || state.requiresReview || block || !online) { event.preventDefault(); return; }
-    if (!parties.trim()) { event.preventDefault(); setPartiesError("Name the parties to the document."); return; }
+    const missingParties = !parties.trim();
+    const missingProperty = !propertyDescription.trim();
+    if (missingParties) setPartiesError("Name the parties to the document.");
+    if (missingProperty) setPropertyDescriptionError("Describe the property.");
+    if (missingParties || missingProperty) { event.preventDefault(); return; }
     submittingRef.current = true;
     setPartiesError("");
+    setPropertyDescriptionError("");
   }
 
   const back = <button className="mt-2 w-full border-0 bg-transparent py-3 text-body-lg font-semibold text-text-muted" onClick={onBack} type="button">Back to calculator</button>;
@@ -133,6 +140,10 @@ export function InvoiceFlow({ calculation, context, onBack }: { calculation: Cal
       <Card className="mb-4">
         <SectionTitle icon="groups">Parties</SectionTitle>
         <TextField error={partiesError || state.fieldErrors.parties} hint="This appears on the invoice and on your Certificate of Compliance, so use the names as they appear on the instrument." id="parties" label="Parties to the Document" maxLength={160} multiline name="parties" onChange={(event) => { setParties(event.target.value); setPartiesError(""); }} placeholder="e.g. Chinedu Okafor to Adeola Properties Ltd" value={parties}/>
+      </Card>
+      <Card className="mb-4">
+        <SectionTitle icon="home-work">Property</SectionTitle>
+        <TextField error={propertyDescriptionError || state.fieldErrors.propertyDescription} hint="Describe the land as it appears on the instrument: location, plot or survey number, size." id="propertyDescription" label="Description of Property" maxLength={500} multiline name="propertyDescription" onChange={(event) => { setPropertyDescription(event.target.value); setPropertyDescriptionError(""); }} placeholder="e.g. Plot 14, Block C, Ikota Layout, Lekki, Lagos (approx. 600 sqm)" value={propertyDescription}/>
       </Card>
       {state.status === "error" && state.message ? <Notice className="mb-4" tone="error">{state.message}{state.requiresReview ? <> <Link className="font-semibold underline" href="/transactions">Check Transactions</Link></> : null}</Notice> : null}
       <Button disabled={state.requiresReview || !online} loading={pending} type="submit">{online ? "Generate Invoice" : "Offline: reconnect to generate"}</Button>

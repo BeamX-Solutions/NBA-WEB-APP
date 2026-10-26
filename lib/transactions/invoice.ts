@@ -10,6 +10,8 @@ export type InvoiceRecord = {
   canSubmitProof: boolean;
   documentType: string;
   parties: string;
+  /** Null on invoices drawn before the field existed. */
+  propertyDescription: string | null;
   amountPayable: string;
   branchFee: string;
   dueToPractitioner: string;
@@ -18,7 +20,7 @@ export type InvoiceRecord = {
   branch: { name: string; accountName: string | null; accountNumber: string | null; bankName: string | null };
 };
 
-export const invoiceColumns = "id, invoice_number, status, document_type, parties, amount_payable, branch_fee, due_to_practitioner, created_at, branches!transactions_branch_id_fkey(name, account_name, account_number, bank_name)";
+export const invoiceColumns = "id, invoice_number, status, document_type, parties, property_description, amount_payable, branch_fee, due_to_practitioner, created_at, branches!transactions_branch_id_fkey(name, account_name, account_number, bank_name)";
 
 export function parseInvoice(value: unknown, identity: { name: string; scn: string }): InvoiceRecord | null {
   const row = asRow(value);
@@ -39,7 +41,7 @@ export function parseInvoice(value: unknown, identity: { name: string; scn: stri
   const bankName = text(branch.bank_name);
   const complete = Boolean(accountName && accountNumber && bankName);
   return {
-    id: row.id, invoiceNumber, issuedAt, issuedOn, documentType, parties, amountPayable, branchFee, dueToPractitioner,
+    id: row.id, invoiceNumber, issuedAt, issuedOn, documentType, parties, propertyDescription: text(row.property_description), amountPayable, branchFee, dueToPractitioner,
     canSubmitProof: row.status === "awaiting_payment" || row.status === "rejected",
     practitioner: identity.name, scn: identity.scn,
     // Partial details are treated as none: an incomplete account is one nobody can pay into.

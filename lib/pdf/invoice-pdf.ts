@@ -9,6 +9,8 @@ export type InvoicePdfData = {
   practitioner: string;
   scn: string;
   parties: string;
+  /** Null on invoices drawn before the field existed; the row is left out. */
+  propertyDescription: string | null;
   documentType: string;
   amountPayable: string;
   branchFee: string;
@@ -69,6 +71,7 @@ export async function createInvoicePdf(data: InvoicePdfData, assets: PdfAssets):
   y = row(canvas, "Practitioner", data.practitioner, y);
   y = row(canvas, "Supreme Court Number", data.scn, y);
   y = row(canvas, "Parties", data.parties, y);
+  if (data.propertyDescription) y = row(canvas, "Description of Property", data.propertyDescription, y);
   y = row(canvas, "Document Type", data.documentType, y);
 
   // Remuneration.

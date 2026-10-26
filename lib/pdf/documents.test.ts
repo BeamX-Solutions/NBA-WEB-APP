@@ -16,7 +16,7 @@ async function assertSingleA4(blob: Blob): Promise<void> {
 
 const invoice: InvoicePdfData = {
   invoiceNumber: "TXN-00042-DOA", issuedOn: "30 September 2026", practitioner: "Test Practitioner", scn: "SCN/TEST",
-  parties: "Chinedu Okafor to Adeola Properties Ltd", documentType: "Deed of Assignment", amountPayable: "₦5,500,000",
+  parties: "Chinedu Okafor to Adeola Properties Ltd", propertyDescription: "All that piece of land known as Plot 14, Block C, Ikota Layout, Lekki, Lagos State, measuring approximately 600 square metres. ".repeat(4).trim(), documentType: "Deed of Assignment", amountPayable: "₦5,500,000",
   branchFee: "₦110,000", branchName: "NBA Anaocha Branch", accountName: "NBA Anaocha Branch", accountNumber: "0123456789", bankName: "Zenith Bank",
 };
 
@@ -31,6 +31,7 @@ test("invoice renders as one A4 page, with or without branch bank details", asyn
   const assets = await loadPdfAssets();
   await assertSingleA4(await createInvoicePdf(invoice, assets));
   await assertSingleA4(await createInvoicePdf({ ...invoice, accountName: null, accountNumber: null, bankName: null }, assets));
+  await assertSingleA4(await createInvoicePdf({ ...invoice, propertyDescription: null }, assets));
 });
 
 test("downloaded certificate renders as one A4 portrait page, revoked or not, with a signature image or without", async () => {

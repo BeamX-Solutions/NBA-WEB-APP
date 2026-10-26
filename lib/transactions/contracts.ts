@@ -16,6 +16,8 @@ export type TransactionRecord = {
   date: string;
   status: TransactionStatus;
   parties: string;
+  /** Null on invoices drawn before the field existed. */
+  propertyDescription: string | null;
   consideration: string;
   /** What the client pays into the branch account: the professional fee. */
   amountPayable: string;
@@ -89,6 +91,7 @@ export function parseTransaction(value: unknown, identity: { name: string; scn: 
     date: formatLagosDate(row.created_at) ?? "Unavailable",
     status,
     parties: text(row.parties) ?? "Unavailable",
+    propertyDescription: text(row.property_description),
     consideration: money(row.consideration) ?? "Unavailable",
     amountPayable: money(row.amount_payable) ?? "Unavailable",
     branchFee: money(row.branch_fee) ?? "Unavailable",

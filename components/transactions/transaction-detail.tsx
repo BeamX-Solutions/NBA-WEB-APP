@@ -113,6 +113,7 @@ export function TransactionDetail({ transaction }: { transaction: TransactionRec
         <DetailRow label="Name of Practitioner" value={transaction.practitioner}/>
         <DetailRow label="Supreme Court Number" value={transaction.scn}/>
         <DetailRow label="Parties to the Document" value={transaction.parties}/>
+        {transaction.propertyDescription ? <DetailRow label="Description of Property" value={transaction.propertyDescription}/> : null}
         <DetailRow label="Type of Document" value={transaction.documentType}/>
         <DetailRow label="Consideration" value={transaction.consideration}/>
         <DetailRow emphasise label="Client pays into branch account" value={transaction.amountPayable}/>
