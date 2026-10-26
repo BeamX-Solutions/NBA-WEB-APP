@@ -30,6 +30,7 @@ export type InvoiceFieldErrors = {
   amount?: string;
   document?: string;
   parties?: string;
+  propertyDescription?: string;
 };
 
 export type CreateInvoiceActionState = {

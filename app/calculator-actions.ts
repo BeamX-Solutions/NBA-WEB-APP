@@ -20,6 +20,7 @@ export async function createInvoiceAction(
     amount: String(formData.get("amount") ?? ""),
     documentId: String(formData.get("documentId") ?? ""),
     parties: String(formData.get("parties") ?? ""),
+    propertyDescription: String(formData.get("propertyDescription") ?? ""),
   });
   if (!validation.data) {
     return { fieldErrors: validation.fieldErrors, message: "Review the highlighted details.", status: "error", transaction: null };
@@ -43,7 +44,7 @@ export async function createInvoiceAction(
     return { fieldErrors: {}, message: "Your practitioner profile is not available. Contact your branch administrator.", status: "error", transaction: null };
   }
 
-  const { amountKobo, databaseDocumentType, document, parties } = validation.data;
+  const { amountKobo, databaseDocumentType, document, parties, propertyDescription } = validation.data;
   // Recomputed here rather than taken from the browser. create_transaction checks the branch fee again.
   const fee = calculateLegalFee(document, amountKobo);
 
@@ -56,6 +57,7 @@ export async function createInvoiceAction(
       p_document_type: databaseDocumentType,
       p_parties: parties,
       p_professional_fee: fee.professionalFeeKobo.toString(),
+      p_property_description: propertyDescription,
     });
   } catch {
     return { fieldErrors: {}, message: "The invoice response was interrupted. Check Transactions before creating another invoice.", requiresReview: true, status: "error", transaction: null };

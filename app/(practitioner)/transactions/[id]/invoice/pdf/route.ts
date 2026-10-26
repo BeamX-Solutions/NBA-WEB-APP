@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const pdf = await createInvoicePdf({
       invoiceNumber: invoice.invoiceNumber, issuedOn: invoice.issuedOn, practitioner: invoice.practitioner, scn: invoice.scn,
-      parties: invoice.parties, documentType: invoice.documentType, amountPayable: invoice.amountPayable, branchFee: invoice.branchFee,
+      parties: invoice.parties, propertyDescription: invoice.propertyDescription, documentType: invoice.documentType, amountPayable: invoice.amountPayable, branchFee: invoice.branchFee,
       branchName: invoice.branch.name, accountName: invoice.branch.accountName, accountNumber: invoice.branch.accountNumber, bankName: invoice.branch.bankName,
     }, await loadPdfAssets());
     const filename = `invoice-${invoice.invoiceNumber.replace(/[^A-Za-z0-9-]/g, "-")}.pdf`;

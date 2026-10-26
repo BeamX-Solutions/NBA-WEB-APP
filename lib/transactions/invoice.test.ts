@@ -19,6 +19,11 @@ test("an invoice carries the remuneration, split and the drawing branch's accoun
   assert.deepEqual(invoice.branch, { name: "NBA Anaocha Branch", accountName: "NBA Anaocha Branch", accountNumber: "0123456789", bankName: "Zenith Bank" });
 });
 
+test("the description of the property is carried when drawn, and absent on older invoices", () => {
+  assert.equal(parseInvoice({ ...row, property_description: "Plot 14, Block C, Ikota Layout, Lekki" }, identity)?.propertyDescription, "Plot 14, Block C, Ikota Layout, Lekki");
+  assert.equal(parseInvoice({ ...row, property_description: null }, identity)?.propertyDescription, null);
+});
+
 test("incomplete branch bank details are treated as unpublished", () => {
   const invoice = parseInvoice({ ...row, branches: { ...row.branches, bank_name: null } }, identity)!;
   assert.deepEqual(invoice.branch, { name: "NBA Anaocha Branch", accountName: null, accountNumber: null, bankName: null });

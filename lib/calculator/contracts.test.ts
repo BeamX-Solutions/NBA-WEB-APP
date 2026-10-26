@@ -17,11 +17,20 @@ test("invoice validation returns normalized trusted inputs", () => {
     amount: "15,000,000",
     documentId: "deed-of-assignment",
     parties: "  Chinedu Okafor to Adeola Properties Ltd  ",
+    propertyDescription: "  Plot 14, Block C, Ikota Layout, Lekki  ",
   });
   assert.deepEqual(result.fieldErrors, {});
   assert.equal(result.data?.amountKobo, 1_500_000_000n);
   assert.equal(result.data?.databaseDocumentType, "deed_of_assignment");
   assert.equal(result.data?.parties, "Chinedu Okafor to Adeola Properties Ltd");
+  assert.equal(result.data?.propertyDescription, "Plot 14, Block C, Ikota Layout, Lekki");
+});
+
+test("invoice validation requires a description of the property of at most 500 characters", () => {
+  const input = { amount: "15,000,000", documentId: "deed-of-assignment", parties: "A to B" };
+  assert.equal(validateInvoiceInput({ ...input, propertyDescription: "   " }).fieldErrors.propertyDescription, "Describe the property.");
+  assert.match(validateInvoiceInput({ ...input, propertyDescription: "x".repeat(501) }).fieldErrors.propertyDescription ?? "", /500 characters/);
+  assert.deepEqual(validateInvoiceInput({ ...input, propertyDescription: "x".repeat(500) }).fieldErrors, {});
 });
 
 test("invoice validation rejects invalid fields and a discretionary Power of Attorney", () => {
@@ -29,10 +38,12 @@ test("invoice validation rejects invalid fields and a discretionary Power of Att
     amount: "0",
     documentId: "irrevocable-power-of-attorney",
     parties: "",
+    propertyDescription: "",
   });
   assert.equal(result.data, null);
   assert.ok(result.fieldErrors.amount);
   assert.ok(result.fieldErrors.parties);
+  assert.ok(result.fieldErrors.propertyDescription);
   assert.match(result.fieldErrors.document ?? "", /not covered by Scale 4/);
 });
 
