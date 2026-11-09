@@ -32,6 +32,9 @@ const BODY_TOP = H - SHEET - 19.5;
 /** The top of the QR code, the tallest part of the foot. */
 const FOOT_TOP = SHEET + 93;
 const FOOT_CLEARANCE = 24;
+/** Fits the signature over its rule; the height keeps its top just under FOOT_TOP. */
+const SIGNATURE_MAX_WIDTH = 142;
+const SIGNATURE_MAX_HEIGHT = 46;
 const MAX_ROW_EXTRA = 8;
 const MAX_SECTION_EXTRA = 24;
 /** Header to title, title to recital, recital to particulars, particulars to note, note to foot. */
@@ -173,7 +176,7 @@ function drawFoot(canvas: Canvas, data: CertificatePdfData, qr: PDFImage, signat
   const sigCenter = RIGHT - 71;
   const rule = base + 36;
   if (signature) {
-    const scale = Math.min(135 / signature.width, 25.5 / signature.height);
+    const scale = Math.min(SIGNATURE_MAX_WIDTH / signature.width, SIGNATURE_MAX_HEIGHT / signature.height);
     const width = signature.width * scale;
     page.drawImage(signature, { x: sigCenter - width / 2, y: rule - 4.5, width, height: signature.height * scale });
   }
