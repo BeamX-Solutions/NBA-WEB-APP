@@ -25,7 +25,8 @@ export function PractitionerFrame({ header, children }: { header: ReactNode; chi
 
   return <div className="min-h-screen bg-background standalone-phone:flex standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:flex-col" data-tab-shell="">
     {header}
-    <div className={`${tabScreen ? "pb-[calc(76px+env(safe-area-inset-bottom))] min-[800px]:pb-0" : ""} standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:overflow-y-auto standalone-phone:overscroll-contain standalone-phone:pb-0`} ref={scrollRef}>
+    {/* 80px more at the bottom than the tab bar needs, so the assistant's button never covers the end of a page. */}
+    <div className={`${tabScreen ? "pb-[calc(156px+env(safe-area-inset-bottom))] min-[800px]:pb-20" : "pb-20"} standalone-phone:min-h-0 standalone-phone:flex-1 standalone-phone:overflow-y-auto standalone-phone:overscroll-contain standalone-phone:pb-20`} ref={scrollRef}>
       {tabScreen ? <InstallBanner/> : null}
       {children}
     </div>

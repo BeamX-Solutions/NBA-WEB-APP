@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { functionErrorMessage as messageOf } from "@/lib/supabase/function-error";
 import { parseCheckout, parseConfirmation, type Checkout, type Confirmation, type PlanId } from "./contracts";
 
 /**
@@ -10,16 +11,6 @@ import { parseCheckout, parseConfirmation, type Checkout, type Confirmation, typ
  */
 
 type Result<T> = { data: T; error: null } | { data: null; error: string };
-
-/** A function's error body carries a message written for the practitioner. */
-async function messageOf(error: unknown, fallback: string): Promise<string> {
-  const context = (error as { context?: unknown } | null)?.context;
-  if (context instanceof Response) {
-    const body = await context.json().catch(() => null) as { error?: unknown } | null;
-    if (typeof body?.error === "string" && body.error.length > 0) return body.error;
-  }
-  return fallback;
-}
 
 export async function startCheckout(client: SupabaseClient, plan: PlanId, callbackUrl: string): Promise<Result<Checkout>> {
   const fallback = "The payment could not be started. Please try again.";
