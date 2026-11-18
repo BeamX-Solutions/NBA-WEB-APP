@@ -146,3 +146,18 @@ test("input parser rejects unsafe and invalid amounts", () => {
   }
   assert.equal(parseNairaToKobo("1,500.25"), 150_025n);
 });
+
+test("a deed of transfer is priced on Scale 4A, the same as an assignment of the same value", () => {
+  const transfer = documentById("deed-of-transfer");
+  assert.equal(transfer.scale, "4A");
+  assert.equal(transfer.fullRateParty, "Transferee's practitioner");
+  assert.equal(transfer.halfRateParty, "Transferor's practitioner");
+  for (const naira of [1_000_000n, 49_999_999n, 50_000_000n, 60_000_000n, 100_000_001n, 250_000_000n]) {
+    assert.deepEqual(
+      calculateLegalFee(transfer, naira * NAIRA),
+      calculateLegalFee(documentById("deed-of-assignment"), naira * NAIRA),
+      `₦${naira}`,
+    );
+  }
+  assert.equal(feeFor("deed-of-transfer", 60_000_000n), 5_500_000n * NAIRA);
+});

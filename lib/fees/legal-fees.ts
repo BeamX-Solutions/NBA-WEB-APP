@@ -20,6 +20,7 @@ export type DocumentType = {
 
 export const DOCUMENT_TYPES: readonly DocumentType[] = [
   { id: "deed-of-assignment", label: "Deed of Assignment", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Assignee's practitioner", halfRateParty: "Assignor's practitioner" },
+  { id: "deed-of-transfer", label: "Deed of Transfer", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Transferee's practitioner", halfRateParty: "Transferor's practitioner" },
   { id: "deed-of-conveyance", label: "Deed of Conveyance", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner" },
   { id: "deed-of-gift", label: "Deed of Gift", scale: "4A", description: "Scale 4A - Market value of the property.", basisLabel: "Market value of the property", fullRateParty: "Donee's practitioner", halfRateParty: "Donor's practitioner" },
   { id: "contract-of-sale", label: "Contract of Sale", scale: "4A", description: "Scale 4A - Purchase price.", basisLabel: "Purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner" },
