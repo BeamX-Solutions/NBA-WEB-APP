@@ -56,3 +56,15 @@ test("database failures are mapped to safe user messages", () => {
   assert.match(safeInvoiceErrorMessage({ message: "Administrator accounts cannot submit transactions. Use a practitioner account." }), /practitioner account/);
   assert.doesNotMatch(safeInvoiceErrorMessage({ message: "relation secret_table does not exist" }), /secret_table/i);
 });
+
+test("a deed of transfer validates and maps to deed_of_transfer", () => {
+  const result = validateInvoiceInput({
+    amount: "60,000,000",
+    documentId: "deed-of-transfer",
+    parties: "Chinedu Okafor to Adeola Properties Ltd",
+    propertyDescription: "Plot 14, Block C, Ikota Layout, Lekki",
+  });
+  assert.deepEqual(result.fieldErrors, {});
+  assert.equal(result.data?.databaseDocumentType, "deed_of_transfer");
+  assert.equal(result.data?.document.label, "Deed of Transfer");
+});

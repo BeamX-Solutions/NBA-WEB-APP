@@ -10,6 +10,7 @@ export const databaseDocumentTypes = {
   "deed-of-lease": "deed_of_lease",
   "deed-of-sub-lease": "deed_of_sub_lease",
   "deed-of-surrender": "deed_of_surrender",
+  "deed-of-transfer": "deed_of_transfer",
   "irrevocable-power-of-attorney": "power_of_attorney",
   "mortgage-deed": "mortgage_deed",
   "mortgage-release": "deed_of_release",
