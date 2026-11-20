@@ -73,3 +73,16 @@ test("the description of property is particular 4 when drawn, and absent on olde
   assert.equal(older.propertyDescription, null);
   assert.deepEqual(certificateParticulars(older).map((particular) => particular.label), ["NAME OF LAWYER", "RBIN", "SUPREME COURT NUMBER", "PARTIES TO THE DOCUMENT", "TYPE OF DOCUMENT", "CONSIDERATION"]);
 });
+
+test("a certificate from a demo branch is marked as one, on its own record and on verification", () => {
+  assert.equal(parseCertificate(row, identity)!.isDemo, false);
+  const demo = parseCertificate({ ...row, transactions: { ...row.transactions, branches: { ...row.transactions.branches, is_demo: true } } }, identity)!;
+  assert.equal(demo.isDemo, true);
+
+  const publicRow = { found: true, rbin: row.transactions.rbin, certificate_number: row.certificate_number, issued_at: row.issued_at, document_type: row.transactions.document_type, practitioner_name: identity.name, scn: identity.scn, branch_name: "NBA Demo Branch", revoked: false, revocation_reason: null };
+  assert.equal(parseVerification({ ...publicRow, is_demo: true })!.isDemo, true);
+  assert.equal(parseVerification({ ...publicRow, is_demo: false })!.isDemo, false);
+  // A server that predates the column, or any value but true, never marks a real certificate as a demo.
+  assert.equal(parseVerification(publicRow)!.isDemo, false);
+  assert.equal(parseVerification({ ...publicRow, is_demo: "true" })!.isDemo, false);
+});

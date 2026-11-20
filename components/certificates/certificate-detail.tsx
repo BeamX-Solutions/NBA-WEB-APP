@@ -63,6 +63,7 @@ export function CertificateDetail({ certificate, verificationUrl }: { certificat
         <div className="my-3 h-px bg-[#B99B45]"/>
         <p className="mt-1 text-center text-caption tracking-[1px] text-[#14301F] italic">THIS IS TO CERTIFY THAT</p>
         <p className="mt-2 text-center text-caption leading-[21px] text-[#14301F]">{CERTIFICATE_RECITAL}</p>
+        {certificate.isDemo ? <div className="mt-3 rounded-input border border-accent-text bg-accent-surface p-3"><p className="text-center text-label font-bold tracking-[1px] text-accent-text">SPECIMEN - NOT VALID</p></div> : null}
         {certificate.revoked ? <div className="mt-3 rounded-input border border-danger bg-danger-surface p-3"><p className="text-center text-label font-bold text-danger">REVOKED{certificate.revocationReason ? `: ${certificate.revocationReason}` : ""}</p></div> : null}
         <dl className="m-0">{particulars.map(({ label, value }, index) => <div className="mt-4 border-b border-[#DCD2B4] pb-1" key={label}><dt className="text-[11px] font-bold tracking-[0.6px] text-[#5C6B5B]">{index + 1}. {label}</dt><dd className="m-0 mt-[3px] wrap-break-word text-body leading-[21px] font-bold text-[#14301F]">{value}</dd></div>)}</dl>
         <p className="mt-6 text-center text-[11px] leading-[17px] text-[#40503F] italic">{CERTIFICATE_NOTE}</p>
@@ -83,6 +84,7 @@ export function CertificateDetail({ certificate, verificationUrl }: { certificat
       <a className="mt-3 flex items-center gap-1 text-caption font-semibold text-primary" href={verificationUrl} rel="noopener noreferrer" target="_blank"><Icon name="open-in-new" size={18}/><span className="min-w-0 flex-1 break-all">{verificationUrl}</span></a>
     </Card>
 
+    {certificate.isDemo ? <Notice className="mt-4" tone="warning">This is a demonstration certificate from a demo branch. It certifies nothing, and its verification page says so. Any PDF you download is marked SPECIMEN.</Notice> : null}
     {certificate.revoked ? <Notice className="mt-4" tone="error">This certificate has been revoked and is no longer valid. Any PDF you download is marked REVOKED.</Notice> : null}
     <div className="mt-4"><Button disabled={!online} loading={downloading} onClick={download}>{online ? "Download PDF" : "Offline: reconnect to download"}</Button></div>
     {status ? <Notice className="mt-3" tone={status.tone}>{status.message}</Notice> : null}

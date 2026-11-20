@@ -25,7 +25,7 @@ const certificate: CertificatePdfData = {
   practitioner: "Test Practitioner", rbin: "NBA/AN/2026/00042", scn: "SCN/TEST", parties: "A very long list of parties ".repeat(6).trim(),
   propertyDescription: "All that piece of land known as Plot 14, Block C, Ikota Layout, Lekki, Lagos State, measuring approximately 600 square metres. ".repeat(4).slice(0, 500),
   documentType: "Deed of Assignment", consideration: "₦60,000,000", certificateNumber: "NBA/AN/CC/2026/0042", issuedOn: "30 September 2026",
-  branch: "NBA Anaocha Branch", chairman: "Test Chairman", signature: null, revoked: false,
+  branch: "NBA Anaocha Branch", chairman: "Test Chairman", signature: null, revoked: false, isDemo: false,
   verificationUrl: "https://nba-mobile-app.vercel.app/verify/NBA%2FAN%2F2026%2F00042",
 };
 
@@ -49,7 +49,7 @@ test("a short certificate centres its body between header and foot; a long one s
   const layout = footGap(fonts, short);
   assert.ok(layout.gap <= 150, "short certificate leaves a large gap above the foot");
   assert.ok(Math.abs(layout.gap - 24 - layout.section - layout.centre) < 0.01, "body is not centred between header and foot");
-  for (const data of [certificate, { ...certificate, revoked: true }]) assert.ok(footGap(fonts, data).gap >= 0, "body overlaps the foot");
+  for (const data of [certificate, { ...certificate, revoked: true }, { ...certificate, isDemo: true }, { ...certificate, revoked: true, isDemo: true }]) assert.ok(footGap(fonts, data).gap >= 0, "body overlaps the foot");
 });
 
 test("an unreadable signature falls back to the printed name rather than failing", async () => {
@@ -59,4 +59,13 @@ test("an unreadable signature falls back to the printed name rather than failing
 
 test("a certificate without a full verification URL is refused", async () => {
   await assert.rejects(createCertificatePdf({ ...certificate, verificationUrl: "/verify/NBA" }, await loadPdfAssets()));
+});
+
+test("a demo certificate renders as one A4 page and carries the specimen marks", async () => {
+  const assets = await loadPdfAssets();
+  const demo = await createCertificatePdf({ ...certificate, isDemo: true }, assets);
+  await assertSingleA4(demo);
+  await assertSingleA4(await createCertificatePdf({ ...certificate, isDemo: true, revoked: true }, assets));
+  const real = await createCertificatePdf(certificate, assets);
+  assert.ok(demo.size > real.size, "the demo certificate draws more than the real one");
 });
