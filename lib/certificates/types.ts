@@ -20,6 +20,8 @@ export type Certificate = {
   chairmanSignaturePath: string | null;
   revoked: boolean;
   revocationReason: string | null;
+  /** Issued from a demo branch: a specimen that certifies nothing. */
+  isDemo: boolean;
 };
 
-export type VerificationRecord = Pick<Certificate, "rbin" | "certificateNumber" | "issuedAt" | "documentType" | "practitioner" | "scn" | "branch" | "revoked" | "revocationReason">;
+export type VerificationRecord = Pick<Certificate, "rbin" | "certificateNumber" | "issuedAt" | "documentType" | "practitioner" | "scn" | "branch" | "revoked" | "revocationReason" | "isDemo">;

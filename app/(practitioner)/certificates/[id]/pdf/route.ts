@@ -45,7 +45,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       propertyDescription: certificate.propertyDescription,
       documentType: certificate.documentType, consideration: certificate.consideration, certificateNumber: certificate.certificateNumber,
       issuedOn: certificate.issuedOn, branch: certificate.branch, chairman: certificate.chairman === "Unavailable" ? null : certificate.chairman,
-      signature, revoked: certificate.revoked, verificationUrl: verificationUrlFor(certificate.rbin),
+      signature, revoked: certificate.revoked, isDemo: certificate.isDemo, verificationUrl: verificationUrlFor(certificate.rbin),
     }, assets);
     const filename = `certificate-${certificate.certificateNumber.replace(/[^A-Za-z0-9-]/g, "-")}.pdf`;
     return new Response(pdf, { headers: { ...headers, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename}"`, "X-Content-Type-Options": "nosniff" } });

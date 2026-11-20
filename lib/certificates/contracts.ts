@@ -78,6 +78,7 @@ export function parseCertificate(value: unknown, identity: { name: string; scn: 
     parties, propertyDescription: text(transaction.property_description), consideration, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
     chairmanSignaturePath: text(branch.chairman_signature_url),
     revoked: row.revoked_at !== null, revocationReason: text(row.revocation_reason),
+    isDemo: branch.is_demo === true,
   };
 }
 
@@ -92,5 +93,5 @@ export function parseVerification(value: unknown): VerificationRecord | null {
   const scn = text(row.scn);
   const branch = text(row.branch_name);
   if (!rbin || !normalizeRbin(rbin) || !certificateNumber || !issued || !documentType || !practitioner || !scn || !branch) return null;
-  return { rbin, certificateNumber, issuedAt: issued.date, documentType, practitioner, scn, branch, revoked: row.revoked, revocationReason: text(row.revocation_reason) };
+  return { rbin, certificateNumber, issuedAt: issued.date, documentType, practitioner, scn, branch, revoked: row.revoked, revocationReason: text(row.revocation_reason), isDemo: row.is_demo === true };
 }

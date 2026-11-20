@@ -28,9 +28,9 @@ function CertificateCard({ certificate, compact, onShare }: { certificate: Certi
     {!compact ? <div className={`relative mb-3 flex h-[150px] flex-col items-center justify-center gap-2 overflow-hidden rounded-input ${revoked ? "bg-danger-surface" : "bg-success-surface"}`}>
       <Icon color={revoked ? "var(--color-danger)" : "var(--color-primary)"} name={revoked ? "gpp-bad" : "workspace-premium"} size={40}/>
       <span className={`text-caption font-semibold ${revoked ? "text-danger" : "text-primary-text"}`}>Certificate of Compliance</span>
-      <span className="absolute right-2 bottom-2 rounded-full bg-text px-2 py-[2px] text-[10px] font-bold tracking-[0.5px] text-text-inverse">{revoked ? "REVOKED" : "VALID"}</span>
+      <span className="absolute right-2 bottom-2 rounded-full bg-text px-2 py-[2px] text-[10px] font-bold tracking-[0.5px] text-text-inverse">{revoked ? "REVOKED" : certificate.isDemo ? "SPECIMEN" : "VALID"}</span>
     </div> : null}
-    <div className="mb-3 flex justify-between"><Badge className="bg-surface-muted text-text-muted" label={certificate.year}/>{revoked ? <Badge className="bg-danger-surface text-danger" label="Revoked"/> : <Badge label="Official Issue"/>}</div>
+    <div className="mb-3 flex justify-between"><Badge className="bg-surface-muted text-text-muted" label={certificate.year}/>{revoked ? <Badge className="bg-danger-surface text-danger" label="Revoked"/> : certificate.isDemo ? <Badge className="bg-accent-surface text-accent-text" label="Demo"/> : <Badge label="Official Issue"/>}</div>
     <h2 className="m-0 text-title font-bold text-text">Certificate of Compliance</h2>
     {!compact ? <p className="mt-1 text-label text-text-muted">{certificate.documentType}</p> : null}
     <dl className="my-3 flex gap-4 rounded-input bg-surface-muted p-3">

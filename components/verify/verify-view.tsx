@@ -26,7 +26,8 @@ function Result({ outcome }: { outcome: VerifyOutcome }) {
   }
   const { record } = outcome;
   return <Card className="mt-4">
-    <Banner good={!record.revoked}>{record.revoked ? "Certificate revoked" : "Genuine certificate"}</Banner>
+    <Banner good={!record.revoked && !record.isDemo}>{record.isDemo ? "Demonstration certificate, not genuine" : record.revoked ? "Certificate revoked" : "Genuine certificate"}</Banner>
+    {record.isDemo ? <p className="mb-3 text-body leading-[21px] text-text">This certificate was issued from a demo branch to show how the NBA Calculator works. It is not a Certificate of Compliance, certifies nothing, and must not be relied on.</p> : null}
     {record.revoked ? <p className="mb-3 text-body leading-[21px] text-text">This certificate was issued but has since been revoked{record.revocationReason ? `: ${record.revocationReason}` : "."} It should not be relied on.</p> : null}
     <DetailList>
       <DetailRow emphasise label="RBIN" value={record.rbin}/>

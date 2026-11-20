@@ -1,5 +1,5 @@
 import QRCode from "qrcode";
-import type { PDFImage, PDFPage, RGB } from "pdf-lib";
+import { degrees, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
 import { CERTIFICATE_NOTE, CERTIFICATE_RECITAL, certificateParticulars, type CertificateFacts } from "../certificates/wording.ts";
 import type { PdfAssets } from "./assets.ts";
 import { A4, createCanvas, drawCentered, drawLeft, drawSpaced, drawWrapped, fitSize, hex, toPdfBlob, wrap, type Canvas } from "./kit.ts";
@@ -18,8 +18,14 @@ export type CertificatePdfData = CertificateFacts & {
   /** PNG or JPEG bytes from the private signatures bucket, or null to print the name over an empty rule. */
   signature: Uint8Array | null;
   revoked: boolean;
+  /** Issued from a demo branch: printed as a specimen that certifies nothing. */
+  isDemo: boolean;
   verificationUrl: string;
 };
+
+/** Printed in the banner and the note of a demo certificate. */
+export const DEMO_BANNER = "SPECIMEN - NOT VALID";
+export const DEMO_NOTE = "This is a demonstration certificate issued from a demo branch of the NBA Calculator. It certifies nothing and must not be relied on.";
 
 const W = A4.width;
 const H = A4.height;
@@ -107,6 +113,7 @@ function particularLines(fonts: Canvas["fonts"], value: string): string[] {
 }
 
 function noteText(data: CertificatePdfData): string {
+  if (data.isDemo) return DEMO_NOTE;
   const host = data.verificationUrl.split("/verify/")[0];
   return `${CERTIFICATE_NOTE} It can be checked independently: scan the code below, or enter the RBIN at ${host}. A printed copy proves nothing on its own.`;
 }
@@ -118,7 +125,7 @@ function noteLines(fonts: Canvas["fonts"], data: CertificatePdfData): string[] {
 /** The body's height with no extra spacing, from the top of the sheet to below the note. */
 function bodyHeight(fonts: Canvas["fonts"], data: CertificatePdfData): number {
   const rows = certificateParticulars(data).reduce((sum, { value }) => sum + 16 + (particularLines(fonts, value).length - 1) * 12, 0);
-  const banner = data.revoked ? 27 : 0;
+  const banner = (data.revoked ? 27 : 0) + (data.isDemo ? 27 : 0);
   return banner + 56 + 100 + 20 + recitalLines(fonts).length * 16.4 + 2 + rows + 26 + (noteLines(fonts, data).length - 1) * 12.6 + 3;
 }
 
@@ -188,6 +195,20 @@ function drawFoot(canvas: Canvas, data: CertificatePdfData, qr: PDFImage, signat
   drawCentered(page, branch, sigCenter, rule - 32, { ...small, size: fitSize(branch, fonts.sans, 142, 7.5, 5) });
 }
 
+/** "SPECIMEN" across the sheet at 45 degrees, over everything, so no part of the page can be cropped into a clean copy. */
+function drawSpecimenWatermark(canvas: Canvas): void {
+  const { page, fonts } = canvas;
+  const text = "SPECIMEN";
+  const size = 96;
+  const angle = Math.PI / 4;
+  const width = fonts.bold.widthOfTextAtSize(text, size);
+  const height = fonts.bold.heightAtSize(size, { descender: false });
+  // Start the baseline so the rotated text's centre lands on the page's centre.
+  const x = W / 2 - (width / 2) * Math.cos(angle) + (height / 2) * Math.sin(angle);
+  const y = H / 2 - (width / 2) * Math.sin(angle) - (height / 2) * Math.cos(angle);
+  page.drawText(text, { x, y, size, font: fonts.bold, color: hex("#9a3b00"), opacity: 0.16, rotate: degrees(45) });
+}
+
 export async function createCertificatePdf(data: CertificatePdfData, assets: PdfAssets): Promise<Blob> {
   if (!/^https?:\/\//.test(data.verificationUrl)) throw new Error("A full verification URL is required.");
   const canvas = await createCanvas(assets);
@@ -208,6 +229,11 @@ export async function createCertificatePdf(data: CertificatePdfData, assets: Pdf
   if (data.revoked) {
     page.drawRectangle({ x: LEFT, y: y - 18, width: CONTENT, height: 18, color: hex("#8d2318") });
     drawSpaced(page, "REVOKED", W / 2, y - 12.5, 3.75, { font: fonts.bold, size: 9.8, color: hex("#ffffff") as RGB });
+    y -= 27;
+  }
+  if (data.isDemo) {
+    page.drawRectangle({ x: LEFT, y: y - 18, width: CONTENT, height: 18, color: hex("#9a3b00") });
+    drawSpaced(page, DEMO_BANNER, W / 2, y - 12.5, 3, { font: fonts.bold, size: 9.8, color: hex("#ffffff") as RGB });
     y -= 27;
   }
 
@@ -233,5 +259,6 @@ export async function createCertificatePdf(data: CertificatePdfData, assets: Pdf
   drawWrapped(page, noteText(data), { x: LEFT + 15, y: y - 26 - spacing.section, width: CONTENT - 30, leading: 12.6, align: "center", font: fonts.sans, size: 7.9, color: soft });
 
   drawFoot(canvas, data, qr, signature);
+  if (data.isDemo) drawSpecimenWatermark(canvas);
   return toPdfBlob(canvas.pdf);
 }
