@@ -18,7 +18,7 @@ async function assertSingleA4(blob: Blob): Promise<void> {
 const invoice: InvoicePdfData = {
   invoiceNumber: "TXN-00042-DOA", issuedOn: "30 September 2026", practitioner: "Test Practitioner", scn: "SCN/TEST",
   parties: "Chinedu Okafor to Adeola Properties Ltd", propertyDescription: "All that piece of land known as Plot 14, Block C, Ikota Layout, Lekki, Lagos State, measuring approximately 600 square metres. ".repeat(4).trim(), documentType: "Deed of Assignment", amountPayable: "₦5,500,000",
-  branchFee: "₦110,000", branchName: "NBA Anaocha Branch", accountName: "NBA Anaocha Branch", accountNumber: "0123456789", bankName: "Zenith Bank",
+  branchFee: "₦110,000", branchName: "NBA Anaocha Branch", accountName: "NBA Anaocha Branch", accountNumber: "0123456789", bankName: "Zenith Bank", isDemo: false,
 };
 
 const certificate: CertificatePdfData = {
@@ -68,4 +68,12 @@ test("a demo certificate renders as one A4 page and carries the specimen marks",
   await assertSingleA4(await createCertificatePdf({ ...certificate, isDemo: true, revoked: true }, assets));
   const real = await createCertificatePdf(certificate, assets);
   assert.ok(demo.size > real.size, "the demo certificate draws more than the real one");
+});
+
+test("a demo invoice renders as one A4 page with its do-not-pay marks; a real one has none", async () => {
+  const assets = await loadPdfAssets();
+  const demo = await createInvoicePdf({ ...invoice, isDemo: true }, assets);
+  await assertSingleA4(demo);
+  const real = await createInvoicePdf(invoice, assets);
+  assert.ok(demo.size > real.size, "the demo invoice draws more than the real one");
 });

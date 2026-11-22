@@ -23,6 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       invoiceNumber: invoice.invoiceNumber, issuedOn: invoice.issuedOn, practitioner: invoice.practitioner, scn: invoice.scn,
       parties: invoice.parties, propertyDescription: invoice.propertyDescription, documentType: invoice.documentType, amountPayable: invoice.amountPayable, branchFee: invoice.branchFee,
       branchName: invoice.branch.name, accountName: invoice.branch.accountName, accountNumber: invoice.branch.accountNumber, bankName: invoice.branch.bankName,
+      isDemo: invoice.isDemo,
     }, await loadPdfAssets());
     const filename = `invoice-${invoice.invoiceNumber.replace(/[^A-Za-z0-9-]/g, "-")}.pdf`;
     return new Response(pdf, { headers: { ...headers, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename}"`, "X-Content-Type-Options": "nosniff" } });

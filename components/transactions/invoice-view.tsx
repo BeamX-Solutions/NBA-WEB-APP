@@ -63,6 +63,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceRecord }) {
 
   return <Screen>
     <ScreenHeading subtitle="Your client pays this into the branch account. Upload their payment slip once they have paid." title="Invoice"/>
+    {invoice.isDemo ? <Notice className="mb-4" tone="warning">This is a demonstration invoice from a demo branch. Nobody should pay it: the account below is not real. Any PDF you download is marked DO NOT PAY.</Notice> : null}
     <Card>
       <div className="flex items-center gap-3 border-b border-border pb-3"><Image alt="" className="size-11 object-contain" height={44} src="/nba-seal.png" width={44}/><div className="flex-1"><p className="text-body-lg font-bold text-primary-text">{branch.name}</p><p className="text-caption text-text-muted">{PRODUCT_NAME}</p></div></div>
       <DetailList>

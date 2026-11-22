@@ -38,7 +38,7 @@ function Result({ outcome }: { outcome: VerifyOutcome }) {
       <DetailRow label="Issuing Branch" value={record.branch}/>
       <DetailRow label="Date of Issue" value={record.issuedAt}/>
     </DetailList>
-    <p className="mt-4 text-caption leading-[17px] text-text-muted">This confirms that the certificate was issued by the branch shown, to the practitioner shown, on the date shown. The consideration and the names of the parties are not disclosed. It is not confirmation that any fee was correctly assessed.</p>
+    {record.isDemo ? null : <p className="mt-4 text-caption leading-[17px] text-text-muted">This confirms that the certificate was issued by the branch shown, to the practitioner shown, on the date shown. The consideration and the names of the parties are not disclosed. It is not confirmation that any fee was correctly assessed.</p>}
   </Card>;
 }
 

@@ -1,6 +1,6 @@
 import { ATTRIBUTION, ORDER_FULL_NAME, PRODUCT_NAME } from "../branding.ts";
 import type { PdfAssets } from "./assets.ts";
-import { A4, createCanvas, drawLeft, drawRight, drawSpaced, drawWrapped, hex, toPdfBlob, wrap, type Canvas } from "./kit.ts";
+import { A4, createCanvas, DEMO_MARK, drawLeft, drawRight, drawSpaced, drawSpecimenWatermark, drawWrapped, hex, toPdfBlob, wrap, type Canvas } from "./kit.ts";
 
 /** The client's bill, following mobile/lib/pdf.ts invoiceHtml. All money values arrive formatted. */
 export type InvoicePdfData = {
@@ -18,7 +18,11 @@ export type InvoicePdfData = {
   accountName: string | null;
   accountNumber: string | null;
   bankName: string | null;
+  /** Drawn on a demo branch: printed with a do-not-pay banner and a specimen watermark. */
+  isDemo: boolean;
 };
+
+export const DEMO_INVOICE_BANNER = "DEMONSTRATION INVOICE - DO NOT PAY";
 
 const M = 40;
 const green = hex("#0B5D33");
@@ -54,6 +58,12 @@ export async function createInvoicePdf(data: InvoicePdfData, assets: PdfAssets):
   const canvas = await createCanvas(assets);
   const { page, fonts, seal } = canvas;
   page.drawImage(seal, { x: (A4.width - 285) / 2, y: (A4.height - 285) / 2, width: 285, height: 285, opacity: 0.05 });
+
+  // Above the letterhead, in the space the top margin leaves.
+  if (data.isDemo) {
+    page.drawRectangle({ x: M, y: 810, width: A4.width - 2 * M, height: 18, color: hex(DEMO_MARK) });
+    drawSpaced(page, DEMO_INVOICE_BANNER, A4.width / 2, 815.5, 2, { font: fonts.bold, size: 9, color: hex("#ffffff") });
+  }
 
   // Letterhead.
   page.drawImage(seal, { x: (A4.width - 44) / 2, y: 758, width: 44, height: 44 });
@@ -101,5 +111,6 @@ export async function createInvoicePdf(data: InvoicePdfData, assets: PdfAssets):
 
   drawWrapped(page, `Fees are computed under the ${ORDER_FULL_NAME}. The figures shown are prescribed minimums, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor's Consent. ${ATTRIBUTION}.`, { x: M, y: y - 22, width: A4.width - 2 * M, leading: 11, font: fonts.sans, size: 7.5, color: muted });
 
+  if (data.isDemo) drawSpecimenWatermark(canvas);
   return toPdfBlob(canvas.pdf);
 }
