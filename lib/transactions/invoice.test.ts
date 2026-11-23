@@ -38,3 +38,9 @@ test("malformed rows are refused rather than shown as payable", () => {
 test("the share text is the client's payment instruction", () => {
   assert.equal(invoiceShareText(parseInvoice(row, identity)!), "Invoice TXN-00012-DOA: please pay ₦5,500,000 to NBA Anaocha Branch, account 0123456789, Zenith Bank. Quote the reference.");
 });
+
+test("an invoice drawn on a demo branch is marked as one; anything but true is not", () => {
+  assert.equal(parseInvoice(row, identity)!.isDemo, false);
+  assert.equal(parseInvoice({ ...row, branches: { ...row.branches, is_demo: true } }, identity)!.isDemo, true);
+  assert.equal(parseInvoice({ ...row, branches: { ...row.branches, is_demo: "true" } }, identity)!.isDemo, false);
+});

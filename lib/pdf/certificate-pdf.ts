@@ -1,8 +1,8 @@
 import QRCode from "qrcode";
-import { degrees, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
+import type { PDFImage, PDFPage, RGB } from "pdf-lib";
 import { CERTIFICATE_NOTE, CERTIFICATE_RECITAL, certificateParticulars, type CertificateFacts } from "../certificates/wording.ts";
 import type { PdfAssets } from "./assets.ts";
-import { A4, createCanvas, drawCentered, drawLeft, drawSpaced, drawWrapped, fitSize, hex, toPdfBlob, wrap, type Canvas } from "./kit.ts";
+import { A4, createCanvas, drawCentered, drawLeft, drawSpaced, drawSpecimenWatermark, drawWrapped, fitSize, hex, toPdfBlob, wrap, type Canvas } from "./kit.ts";
 
 /**
  * The Certificate of Compliance, following mobile/lib/pdf.ts certificateHtml: gold double frame on
@@ -193,20 +193,6 @@ function drawFoot(canvas: Canvas, data: CertificatePdfData, qr: PDFImage, signat
   drawCentered(page, "CHAIRMAN", sigCenter, rule - 21, small);
   const branch = data.branch.toUpperCase();
   drawCentered(page, branch, sigCenter, rule - 32, { ...small, size: fitSize(branch, fonts.sans, 142, 7.5, 5) });
-}
-
-/** "SPECIMEN" across the sheet at 45 degrees, over everything, so no part of the page can be cropped into a clean copy. */
-function drawSpecimenWatermark(canvas: Canvas): void {
-  const { page, fonts } = canvas;
-  const text = "SPECIMEN";
-  const size = 96;
-  const angle = Math.PI / 4;
-  const width = fonts.bold.widthOfTextAtSize(text, size);
-  const height = fonts.bold.heightAtSize(size, { descender: false });
-  // Start the baseline so the rotated text's centre lands on the page's centre.
-  const x = W / 2 - (width / 2) * Math.cos(angle) + (height / 2) * Math.sin(angle);
-  const y = H / 2 - (width / 2) * Math.sin(angle) - (height / 2) * Math.cos(angle);
-  page.drawText(text, { x, y, size, font: fonts.bold, color: hex("#9a3b00"), opacity: 0.16, rotate: degrees(45) });
 }
 
 export async function createCertificatePdf(data: CertificatePdfData, assets: PdfAssets): Promise<Blob> {

@@ -18,9 +18,11 @@ export type InvoiceRecord = {
   practitioner: string;
   scn: string;
   branch: { name: string; accountName: string | null; accountNumber: string | null; bankName: string | null };
+  /** Drawn on a demo branch: a demonstration that nobody should pay. */
+  isDemo: boolean;
 };
 
-export const invoiceColumns = "id, invoice_number, status, document_type, parties, property_description, amount_payable, branch_fee, due_to_practitioner, created_at, branches!transactions_branch_id_fkey(name, account_name, account_number, bank_name)";
+export const invoiceColumns = "id, invoice_number, status, document_type, parties, property_description, amount_payable, branch_fee, due_to_practitioner, created_at, branches!transactions_branch_id_fkey(name, account_name, account_number, bank_name, is_demo)";
 
 export function parseInvoice(value: unknown, identity: { name: string; scn: string }): InvoiceRecord | null {
   const row = asRow(value);
@@ -46,6 +48,7 @@ export function parseInvoice(value: unknown, identity: { name: string; scn: stri
     practitioner: identity.name, scn: identity.scn,
     // Partial details are treated as none: an incomplete account is one nobody can pay into.
     branch: { name: branchName, accountName: complete ? accountName : null, accountNumber: complete ? accountNumber : null, bankName: complete ? bankName : null },
+    isDemo: branch.is_demo === true,
   };
 }
 

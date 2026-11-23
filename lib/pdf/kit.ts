@@ -1,5 +1,5 @@
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
+import { degrees, PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
 import type { PdfAssets } from "./assets.ts";
 
 /** Small drawing kit shared by the server-drawn invoice and certificate. Coordinates are PDF points. */
@@ -98,4 +98,24 @@ export function fitSize(value: string, font: PDFFont, width: number, start: numb
 
 export async function toPdfBlob(pdf: PDFDocument): Promise<Blob> {
   return new Blob([new Uint8Array(await pdf.save())], { type: "application/pdf" });
+}
+
+/** Colour of everything that marks a demo document: the banner and the watermark. */
+export const DEMO_MARK = "#9a3b00";
+
+/**
+ * "SPECIMEN" across an A4 page at 45 degrees, drawn last so it lies over everything and no part of
+ * the page can be cropped into a clean copy. Used on demo-branch certificates and invoices.
+ */
+export function drawSpecimenWatermark(canvas: Canvas): void {
+  const { page, fonts } = canvas;
+  const text = "SPECIMEN";
+  const size = 96;
+  const angle = Math.PI / 4;
+  const width = fonts.bold.widthOfTextAtSize(text, size);
+  const height = fonts.bold.heightAtSize(size, { descender: false });
+  // Start the baseline so the rotated text's centre lands on the page's centre.
+  const x = A4.width / 2 - (width / 2) * Math.cos(angle) + (height / 2) * Math.sin(angle);
+  const y = A4.height / 2 - (width / 2) * Math.sin(angle) - (height / 2) * Math.cos(angle);
+  page.drawText(text, { x, y, size, font: fonts.bold, color: hex(DEMO_MARK), opacity: 0.16, rotate: degrees(45) });
 }
