@@ -14,7 +14,9 @@ const markError = "This could not be marked as read. Check your connection and t
 
 function NotificationRow({ notification, onOpen, disabled }: { notification: AppNotification; onOpen: (notification: AppNotification) => void; disabled: boolean }) {
   const { icon, tone } = notificationPresentation(notification.kind);
-  const circle = tone === "danger" ? "bg-danger-surface text-danger" : "bg-success-surface text-primary";
+  const circle = tone === "danger" ? "bg-danger-surface text-danger"
+    : tone === "warning" ? "bg-accent-surface text-accent-text"
+    : "bg-success-surface text-primary";
   return <li className="border-b border-border last:border-b-0">
     <button className={`flex w-full items-start gap-3 border-0 px-4 py-3 text-left hover:bg-surface-muted disabled:cursor-wait ${notification.read ? "bg-surface" : "bg-primary-surface"}`} disabled={disabled} onClick={() => onOpen(notification)} type="button">
       <span className={`grid size-10 shrink-0 place-items-center rounded-full ${circle}`}><Icon name={icon} size={22}/></span>
