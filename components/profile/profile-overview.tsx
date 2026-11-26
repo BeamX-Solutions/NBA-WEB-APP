@@ -16,11 +16,22 @@ import type { PractitionerProfile, PractitionerSubscription } from "@/lib/profil
 import { canRenew, renewalOpensAt } from "@/lib/subscriptions/renewal";
 import { createClient } from "@/lib/supabase/client";
 
+/** The free first month, granted when the branch approves the membership (NBA APP 20261126100100). */
+function isFreeTrial(subscription: PractitionerSubscription | null): boolean {
+  return subscription?.rateType === "free_trial";
+}
+
 function SubscriptionCard({ subscription }: { subscription: PractitionerSubscription | null }) {
   const active = subscription?.isCurrent ? subscription : null;
   return <Card>
     <SectionTitle icon="workspace-premium" underline>Subscription Status</SectionTitle>
-    {active ? <>
+    {active && isFreeTrial(active) ? <>
+      <div className="mb-2 flex items-center justify-between gap-3"><p className="text-body-lg font-bold text-text">Free First Month</p><Badge label="Free"/></div>
+      <DetailList>
+        <DetailRow label="Free Until" value={formatProfileDate(active.expiresAt)}/>
+      </DetailList>
+      <p className="mt-3 text-label leading-[20px] text-text-muted">Subscribe any time before then and you keep the free days left: your plan starts when the free month ends.</p>
+    </> : active ? <>
       <div className="mb-2 flex items-center justify-between gap-3"><p className="text-body-lg font-bold text-text">{labelEnum(active.plan)}{active.rateType === "branch_discounted" ? " (Branch rate)" : ""}</p><Badge label="Active"/></div>
       <DetailList>
         {/* Stored in kobo, like every money column. */}
@@ -32,9 +43,13 @@ function SubscriptionCard({ subscription }: { subscription: PractitionerSubscrip
   </Card>;
 }
 
-/** Renewal is offered only in the last 7 days (lib/subscriptions/renewal). */
+/**
+ * Renewal is offered only in the last 7 days (lib/subscriptions/renewal). A free month is the
+ * exception: paying during it is the point, and the server starts the paid term when it ends.
+ */
 function SubscriptionAction({ active }: { active: PractitionerSubscription | null }) {
   if (!active) return <div className="mt-4"><ButtonLink href="/profile/plans">Choose a Plan</ButtonLink></div>;
+  if (isFreeTrial(active)) return <div className="mt-4"><ButtonLink href="/profile/plans">Subscribe Now</ButtonLink></div>;
   if (canRenew(active.expiresAt)) return <div className="mt-4"><ButtonLink href="/profile/plans">Renew Now</ButtonLink></div>;
   const opens = renewalOpensAt(active.expiresAt);
   return <p className="mt-4 text-label text-text-muted">You can renew from {opens ? formatProfileDate(opens.toISOString()) : "7 days before it expires"}.</p>;

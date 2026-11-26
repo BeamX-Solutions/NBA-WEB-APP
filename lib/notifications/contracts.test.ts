@@ -17,6 +17,14 @@ test("a stored notification becomes an unread inbox row", () => {
   assert.equal(parseNotification({ ...row, read_at: "2026-10-01T11:56:00Z" }, now)?.read, true);
 });
 
+test("the free first month's notifications are shown, pointing at the plans", () => {
+  for (const kind of ["free_trial_started", "free_trial_ending", "free_trial_last_day"]) {
+    const parsed = parseNotification({ ...row, kind, link: "/profile/plans" }, now);
+    assert.equal(parsed?.kind, kind);
+    assert.equal(parsed?.link, "/profile/plans");
+  }
+});
+
 test("malformed rows are dropped rather than shown", () => {
   for (const value of [null, [], { ...row, id: "1" }, { ...row, kind: "forged" }, { ...row, title: " " }, { ...row, body: null }, { ...row, created_at: "bad" }, { ...row, read_at: 5 }]) {
     assert.equal(parseNotification(value, now), null);

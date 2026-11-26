@@ -11,6 +11,10 @@ export const NOTIFICATION_KINDS = [
   "share_paid",
   "certificate_revoked",
   "certificate_restored",
+  // The free first month (NBA APP 20261126100100 and 20261126100200).
+  "free_trial_started",
+  "free_trial_ending",
+  "free_trial_last_day",
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
@@ -27,7 +31,8 @@ export type AppNotification = {
   read: boolean;
 };
 
-export type NotificationTone = "success" | "danger";
+/** "warning" is for something the practitioner should act on soon, before it becomes a problem. */
+export type NotificationTone = "success" | "warning" | "danger";
 
 const presentation: Record<NotificationKind, { icon: string; tone: NotificationTone }> = {
   membership_approved: { icon: "how-to-reg", tone: "success" },
@@ -37,6 +42,9 @@ const presentation: Record<NotificationKind, { icon: string; tone: NotificationT
   share_paid: { icon: "payments", tone: "success" },
   certificate_revoked: { icon: "gpp-bad", tone: "danger" },
   certificate_restored: { icon: "verified-user", tone: "success" },
+  free_trial_started: { icon: "card-giftcard", tone: "success" },
+  free_trial_ending: { icon: "schedule", tone: "warning" },
+  free_trial_last_day: { icon: "alarm", tone: "warning" },
 };
 
 export function notificationPresentation(kind: NotificationKind): { icon: string; tone: NotificationTone } {
