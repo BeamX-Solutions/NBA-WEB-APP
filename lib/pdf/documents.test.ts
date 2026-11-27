@@ -81,7 +81,7 @@ test("a demo invoice renders as one A4 page with its do-not-pay marks; a real on
 test("a Power of Attorney at an agreed fee still fits one A4 page, invoice and certificate alike", async () => {
   const assets = await loadPdfAssets();
   await assertSingleA4(await createInvoicePdf({ ...invoice, documentType: "Irrevocable Power of Attorney", feeAgreed: true }, assets));
-  const poa = { ...certificate, documentType: "Irrevocable Power of Attorney", consideration: "Not applicable (agreed fee)", feeBasis: "Agreed with the client under paragraph 2 of the Order" };
+  const poa = { ...certificate, documentType: "Irrevocable Power of Attorney", consideration: "Not applicable (agreed fee)", feeBasis: "Agreed with the client under paragraph 2 of the Legal Practitioners (Remuneration for Business, Legal Services and Representation) Order, 2023" };
   await assertSingleA4(await createCertificatePdf(poa, assets));
   await assertSingleA4(await createCertificatePdf({ ...poa, revoked: true, isDemo: true }, assets));
   const { fonts } = await createCanvas(assets);

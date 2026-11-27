@@ -1,5 +1,6 @@
 import { isUuid, databaseDocumentTypes } from "../calculator/contracts.ts";
-import { AGREED_FEE_BASIS, DOCUMENT_TYPES } from "../fees/legal-fees.ts";
+import { ORDER_FULL_NAME } from "../branding.ts";
+import { DOCUMENT_TYPES } from "../fees/legal-fees.ts";
 import { AGREED_FEE_CONSIDERATION, asRow, isAgreedFeeType, money, text } from "../transactions/contracts.ts";
 import type { Certificate, VerificationRecord } from "./types.ts";
 
@@ -58,6 +59,12 @@ export function verificationUrlFor(rbin: string, base: string = verificationBase
   return `${base}${verificationPath(rbin)}`;
 }
 
+/**
+ * Names the Order in full: the certificate's recital refers to the branch's order, so "the Order"
+ * alone could be read as that one rather than the 2023 Remuneration Order.
+ */
+export const CERTIFICATE_FEE_BASIS = `Agreed with the client under paragraph 2 of the ${ORDER_FULL_NAME}`;
+
 export function parseCertificate(value: unknown, identity: { name: string; scn: string }): Certificate | null {
   const row = asRow(value);
   const transaction = asRow(row?.transactions);
@@ -76,7 +83,7 @@ export function parseCertificate(value: unknown, identity: { name: string; scn: 
   return {
     id: row.id, year: issued.year, rbin, certificateNumber: number, issuedAt: issued.date, issuedOn: issued.long,
     documentType: document, practitioner: identity.name, scn: identity.scn,
-    parties, propertyDescription: text(transaction.property_description), consideration, feeBasis: agreed ? AGREED_FEE_BASIS : null, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
+    parties, propertyDescription: text(transaction.property_description), consideration, feeBasis: agreed ? CERTIFICATE_FEE_BASIS : null, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
     chairmanSignaturePath: text(branch.chairman_signature_url),
     revoked: row.revoked_at !== null, revocationReason: text(row.revocation_reason),
     isDemo: branch.is_demo === true,

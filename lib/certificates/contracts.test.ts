@@ -91,7 +91,7 @@ test("a Power of Attorney certificate states the fee was agreed, and records no 
   const poa = parseCertificate({ ...row, transactions: { ...row.transactions, document_type: "power_of_attorney", consideration: "0" } }, identity)!;
   assert.equal(poa.documentType, "Irrevocable Power of Attorney");
   assert.equal(poa.consideration, "Not applicable (agreed fee)");
-  assert.match(poa.feeBasis ?? "", /^Agreed with the client under paragraph 2/);
+  assert.match(poa.feeBasis ?? "", /^Agreed with the client under paragraph 2 of the Legal Practitioners \(Remuneration .*\) Order, 2023$/);
   const particulars = certificateParticulars(poa);
   assert.deepEqual(particulars.at(-1), { label: "BASIS OF FEE", value: poa.feeBasis });
   assert.equal(parseCertificate(row, identity)!.feeBasis, null);
