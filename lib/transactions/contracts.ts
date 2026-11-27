@@ -61,6 +61,14 @@ export function formatLagosDate(value: unknown, style: "short" | "long" = "short
   return new Intl.DateTimeFormat("en-GB", options).format(date);
 }
 
+/** A stored document type whose fee was agreed with the client rather than computed: the Power of Attorney. */
+export function isAgreedFeeType(value: unknown): boolean {
+  return value === "power_of_attorney";
+}
+
+/** What an agreed-fee invoice or certificate shows for the consideration, which it does not have. */
+export const AGREED_FEE_CONSIDERATION = "Not applicable (agreed fee)";
+
 export function documentTypeLabel(value: unknown): string | null {
   return DOCUMENT_TYPES.find(item => databaseDocumentTypes[item.id as keyof typeof databaseDocumentTypes] === value)?.label ?? null;
 }
@@ -92,7 +100,7 @@ export function parseTransaction(value: unknown, identity: { name: string; scn: 
     status,
     parties: text(row.parties) ?? "Unavailable",
     propertyDescription: text(row.property_description),
-    consideration: money(row.consideration) ?? "Unavailable",
+    consideration: isAgreedFeeType(row.document_type) ? AGREED_FEE_CONSIDERATION : money(row.consideration) ?? "Unavailable",
     amountPayable: money(row.amount_payable) ?? "Unavailable",
     branchFee: money(row.branch_fee) ?? "Unavailable",
     dueToPractitioner: due === null ? "Unavailable" : formatNaira(due),

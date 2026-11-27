@@ -25,6 +25,7 @@ function parseBranch(value: unknown): CalculatorBranch | null {
   const name = asString(row.name);
   if (!name) return null;
   return {
+    acceptsPoaInvoices: row.accepts_poa_invoices === true,
     accountName: asNullableString(row.account_name),
     accountNumber: asNullableString(row.account_number),
     activationStatus: asString(row.activation_status, "unknown"),
@@ -70,7 +71,7 @@ export async function loadCalculatorContext(): Promise<CalculatorContext> {
   const [profileResult, subscriptionResult] = await Promise.all([
     client
       .from("profiles")
-      .select("full_name, scn, branch_id, bank_account_name, bank_account_number, bank_name, branches(name, state, activation_status, account_name, account_number, bank_name)")
+      .select("full_name, scn, branch_id, bank_account_name, bank_account_number, bank_name, branches(name, state, activation_status, account_name, account_number, bank_name, accepts_poa_invoices)")
       .eq("id", user.id)
       .maybeSingle(),
     client

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { branchFeeFor, calculateLegalFee, DOCUMENT_TYPES, FeeCalculationError, formatNaira, groupNairaInput, parseNairaToKobo, type DocumentType } from "./legal-fees.ts";
+import { AGREED_FEE_BASIS, agreedFeeBreakdown, branchFeeFor, calculateLegalFee, DOCUMENT_TYPES, FeeCalculationError, formatNaira, groupNairaInput, parseNairaToKobo, type DocumentType } from "./legal-fees.ts";
 
 // Cases and expected figures are carried over from mobile/lib/fees/calculate.test.ts,
 // so the web and mobile engines are pinned to the same answers.
@@ -160,4 +160,17 @@ test("a deed of transfer is priced on Scale 4A, the same as an assignment of the
     );
   }
   assert.equal(feeFor("deed-of-transfer", 60_000_000n), 5_500_000n * NAIRA);
+});
+
+test("an agreed fee is invoiced as entered, with the branch's usual share and no working", () => {
+  const fee = agreedFeeBreakdown(500_000n * NAIRA);
+  assert.equal(fee.scale, "agreed");
+  assert.equal(fee.professionalFeeKobo, 500_000n * NAIRA);
+  assert.equal(fee.branchFeeKobo, branchFeeFor(500_000n * NAIRA));
+  assert.equal(fee.netFeeKobo, 500_000n * NAIRA - branchFeeFor(500_000n * NAIRA));
+  assert.equal(fee.halfRateFeeKobo, null);
+  assert.deepEqual(fee.lines, []);
+  assert.throws(() => agreedFeeBreakdown(0n), RangeError);
+  assert.throws(() => agreedFeeBreakdown(1_000_000_000_000_01n), RangeError);
+  assert.match(AGREED_FEE_BASIS, /paragraph 2/);
 });

@@ -14,6 +14,8 @@ export type Certificate = {
   /** Null on transactions drawn before the field existed. */
   propertyDescription: string | null;
   consideration: string;
+  /** Set where the fee was agreed with the client (a Power of Attorney), never for a Scale 4 fee. */
+  feeBasis: string | null;
   branch: string;
   chairman: string;
   /** Path in the private `signatures` bucket, or null where the branch has uploaded none. */

@@ -1,6 +1,6 @@
 "use server";
 
-import { calculateLegalFee } from "@/lib/fees/legal-fees";
+import { agreedFeeBreakdown, calculateLegalFee } from "@/lib/fees/legal-fees";
 import { isUuid, safeInvoiceErrorMessage, validateInvoiceInput } from "@/lib/calculator/contracts";
 import type { CreateInvoiceActionState } from "@/lib/calculator/types";
 import { revalidatePath } from "next/cache";
@@ -44,16 +44,18 @@ export async function createInvoiceAction(
     return { fieldErrors: {}, message: "Your practitioner profile is not available. Contact your branch administrator.", status: "error", transaction: null };
   }
 
-  const { amountKobo, databaseDocumentType, document, parties, propertyDescription } = validation.data;
-  // Recomputed here rather than taken from the browser. create_transaction checks the branch fee again.
-  const fee = calculateLegalFee(document, amountKobo);
+  const { amountKobo, databaseDocumentType, document, feeAgreed, parties, propertyDescription } = validation.data;
+  // Recomputed here rather than taken from the browser. create_transaction checks the branch fee again,
+  // and the scale fee, or for an agreed fee whether the branch accepts one.
+  const fee = feeAgreed ? agreedFeeBreakdown(amountKobo) : calculateLegalFee(document, amountKobo);
 
   let rpcResult: Awaited<ReturnType<typeof client.rpc>>;
   try {
     rpcResult = await client.rpc("create_transaction", {
       p_branch_fee: fee.branchFeeKobo.toString(),
       p_breakdown: breakdownForRpc(fee.lines),
-      p_consideration: amountKobo.toString(),
+      // An agreed fee assesses no value, so none is recorded.
+      p_consideration: feeAgreed ? "0" : amountKobo.toString(),
       p_document_type: databaseDocumentType,
       p_parties: parties,
       p_professional_fee: fee.professionalFeeKobo.toString(),

@@ -67,7 +67,8 @@ const SCALE_BANDS: Record<ScaleCode, readonly Band[]> = {
 export type FeeLine = { label: string; amountKobo: bigint };
 
 export type FeeBreakdown = {
-  scale: ScaleCode;
+  /** "agreed" for a fee agreed with the client under paragraph 2 of the Order, which no scale computes. */
+  scale: ScaleCode | "agreed";
   /** Prescribed minimum for the full-rate practitioner: what the client pays into the branch account. */
   professionalFeeKobo: bigint;
   /** Half the scale fee for the other party's practitioner, or null where there is none. */
@@ -132,6 +133,28 @@ function describeBand(band: Band, isFirst: boolean): string {
   }
   if (band.maxKobo === null) return `Above ${formatNaira(band.minKobo)} at ${band.percent}%`;
   return `${formatNaira(band.minKobo)} to ${formatNaira(band.maxKobo)} at ${band.percent}%`;
+}
+
+/** The phrase every agreed-fee document uses, so the calculator, invoice, letter and certificate agree. */
+export const AGREED_FEE_BASIS = "Agreed with the client under paragraph 2 of the Order";
+
+/**
+ * A Power of Attorney's fee is agreed with the client, not computed (paragraph 2 of the Order).
+ * Where the practitioner's branch accepts these invoices (NBA APP 20261127100000), the agreed
+ * figure is invoiced as entered and the branch keeps its usual share. There is no half rate and
+ * no working to show.
+ */
+export function agreedFeeBreakdown(professionalFeeKobo: bigint): FeeBreakdown {
+  if (professionalFeeKobo <= 0n || professionalFeeKobo > MAX_AMOUNT_KOBO) throw new RangeError("Enter a valid positive amount.");
+  const branchFeeKobo = branchFeeFor(professionalFeeKobo);
+  return {
+    scale: "agreed",
+    professionalFeeKobo,
+    halfRateFeeKobo: null,
+    branchFeeKobo,
+    netFeeKobo: professionalFeeKobo - branchFeeKobo,
+    lines: [],
+  };
 }
 
 export function calculateLegalFee(document: DocumentType, amountKobo: bigint): FeeBreakdown {

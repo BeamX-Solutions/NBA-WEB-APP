@@ -86,3 +86,14 @@ test("a certificate from a demo branch is marked as one, on its own record and o
   assert.equal(parseVerification(publicRow)!.isDemo, false);
   assert.equal(parseVerification({ ...publicRow, is_demo: "true" })!.isDemo, false);
 });
+
+test("a Power of Attorney certificate states the fee was agreed, and records no consideration", () => {
+  const poa = parseCertificate({ ...row, transactions: { ...row.transactions, document_type: "power_of_attorney", consideration: "0" } }, identity)!;
+  assert.equal(poa.documentType, "Irrevocable Power of Attorney");
+  assert.equal(poa.consideration, "Not applicable (agreed fee)");
+  assert.match(poa.feeBasis ?? "", /^Agreed with the client under paragraph 2/);
+  const particulars = certificateParticulars(poa);
+  assert.deepEqual(particulars.at(-1), { label: "BASIS OF FEE", value: poa.feeBasis });
+  assert.equal(parseCertificate(row, identity)!.feeBasis, null);
+  assert.ok(!certificateParticulars(parseCertificate(row, identity)!).some((particular) => particular.label === "BASIS OF FEE"));
+});

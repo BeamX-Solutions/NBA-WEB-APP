@@ -9,7 +9,7 @@ import { Icon } from "@/components/mobile/icon";
 import { Screen, ScreenHeading, SectionTitle } from "@/components/mobile/screen";
 import { Notice } from "@/components/mobile/states";
 import type { CalculatorContext } from "@/lib/calculator/types";
-import { calculateLegalFee, DOCUMENT_TYPES, FeeCalculationError, formatNaira, groupNairaInput, parseNairaToKobo, type DocumentType, type FeeBreakdown as Breakdown } from "@/lib/fees/legal-fees";
+import { AGREED_FEE_BASIS, agreedFeeBreakdown, calculateLegalFee, DOCUMENT_TYPES, FeeCalculationError, formatNaira, groupNairaInput, parseNairaToKobo, type DocumentType, type FeeBreakdown as Breakdown } from "@/lib/fees/legal-fees";
 import { greetingFor } from "@/lib/names";
 import { useOnline } from "@/lib/use-online";
 
@@ -35,6 +35,16 @@ function InvoiceAction({ offline, onInvoice }: { offline: boolean; onInvoice: ()
 /** mobile FeeBreakdown: the figure, the working, the half rate, and the practitioner's side of it. */
 function FeeBreakdown({ calculation, offline, onInvoice }: { calculation: Calculation; offline: boolean; onInvoice: () => void }) {
   const { document, fee } = calculation;
+  if (fee.scale === "agreed") return <div aria-live="polite">
+    <p className="text-caption text-text-muted">Agreed fee</p>
+    <strong className="block font-heading text-display leading-tight font-bold text-primary [font-variant-numeric:lining-nums]">{formatNaira(fee.professionalFeeKobo)}</strong>
+    <p className="mt-1 text-caption text-text-muted">{document.label} - {AGREED_FEE_BASIS}</p>
+    <div className="my-3 h-px bg-border"/>
+    <Row label="Less NBA branch fee" labelClass="text-body text-text-muted" value={formatNaira(fee.branchFeeKobo)} valueClass="text-body font-semibold text-text"/>
+    <Row label="Net to you" labelClass="text-body-lg font-bold text-text" value={formatNaira(fee.netFeeKobo)} valueClass="text-body-lg font-bold text-primary"/>
+    <p className="mt-4 text-caption leading-[17px] text-text-muted">A Power of Attorney has no prescribed scale. This is the fee you agreed with your client, having regard to complexity, time and value, exclusive of VAT and disbursements. Your branch checks the payment against it before issuing a certificate.</p>
+    <InvoiceAction offline={offline} onInvoice={onInvoice}/>
+  </div>;
   return <div aria-live="polite">
     <p className="text-caption text-text-muted">{document.fullRateParty}</p>
     <strong className="block font-heading text-display leading-tight font-bold text-primary [font-variant-numeric:lining-nums]">{formatNaira(fee.professionalFeeKobo)}</strong>
@@ -64,6 +74,8 @@ export function CalculatorFlow({ context, offline = false }: { context: Calculat
   const resultRef = useRef<HTMLDivElement>(null);
   const document = DOCUMENT_TYPES.find((item) => item.id === documentId) ?? null;
   const discretionary = document?.scale === "discretionary";
+  // Offline there is no invoice to draw, so the agreed fee is not asked for.
+  const agreedFee = discretionary && !offline && context.branch?.acceptsPoaInvoices === true;
 
   function reset() {
     setCalculation(null);
@@ -74,16 +86,23 @@ export function CalculatorFlow({ context, offline = false }: { context: Calculat
     const nextErrors: typeof errors = {};
     if (!document) nextErrors.documentType = "Select the document type.";
     const amountKobo = parseNairaToKobo(amount);
-    if (!discretionary && amountKobo === null) nextErrors.amount = "Enter the amount, for example 45,000,000.";
+    if (agreedFee && amountKobo === null) nextErrors.amount = "Enter the fee you agreed with your client, for example 500,000.";
+    else if (!discretionary && amountKobo === null) nextErrors.amount = "Enter the amount, for example 45,000,000.";
     setErrors(nextErrors);
     setCalculationError(null);
     if (Object.keys(nextErrors).length > 0 || !document) { setCalculation(null); return; }
+    if (agreedFee && amountKobo !== null) {
+      setCalculation({ document, amountKobo, fee: agreedFeeBreakdown(amountKobo) });
+      requestAnimationFrame(() => { if (window.innerWidth < 800) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); });
+      return;
+    }
     try {
       setCalculation({ document, amountKobo: amountKobo ?? 0n, fee: calculateLegalFee(document, amountKobo ?? 0n) });
     } catch (error) {
       // The engine refuses to guess; for Power of Attorney the reason is the answer.
       setCalculation(null);
-      setCalculationError(error instanceof FeeCalculationError ? error.message : "The fee could not be calculated. Please try again.");
+      const branchNote = discretionary && !offline && context.branch ? " Your branch does not accept Power of Attorney invoices, so one cannot be generated here." : "";
+      setCalculationError(error instanceof FeeCalculationError ? error.message + branchNote : "The fee could not be calculated. Please try again.");
     }
     requestAnimationFrame(() => { if (window.innerWidth < 800) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); });
   }
@@ -102,14 +121,14 @@ export function CalculatorFlow({ context, offline = false }: { context: Calculat
       <Card>
         <SectionTitle icon="description">Transaction Details</SectionTitle>
         <form noValidate onSubmit={(event) => { event.preventDefault(); calculate(); }}>
-          <SelectField error={errors.documentType} hint={document ? `Scale ${document.scale} - ${document.basisLabel}.` : undefined} id="calculator-document" label="Document / Transaction Type" onChange={(value) => { setDocumentId(value); setErrors((current) => ({ ...current, documentType: undefined })); reset(); }} options={documentOptions} placeholder="Select Document Type" value={documentId}/>
-          {discretionary ? null : <TextField error={errors.amount} hint={document?.scale === "4C" ? "Enter one year of rent, not the total over the term." : undefined} id="calculator-amount" inputMode="decimal" label={`${document?.basisLabel ?? "Amount"} (₦)`} onChange={(event) => { setAmount(groupNairaInput(event.target.value)); setErrors((current) => ({ ...current, amount: undefined })); reset(); }} placeholder="0.00" prefix="₦" value={amount}/>}
+          <SelectField error={errors.documentType} hint={document ? (discretionary ? "No prescribed scale: the fee is agreed with the client." : `Scale ${document.scale} - ${document.basisLabel}.`) : undefined} id="calculator-document" label="Document / Transaction Type" onChange={(value) => { setDocumentId(value); setErrors((current) => ({ ...current, documentType: undefined })); reset(); }} options={documentOptions} placeholder="Select Document Type" value={documentId}/>
+          {discretionary && !agreedFee ? null : <TextField error={errors.amount} hint={agreedFee ? "The fee you agreed with your client under paragraph 2 of the Order." : document?.scale === "4C" ? "Enter one year of rent, not the total over the term." : undefined} id="calculator-amount" inputMode="decimal" label={agreedFee ? "Agreed fee (₦)" : `${document?.basisLabel ?? "Amount"} (₦)`} onChange={(event) => { setAmount(groupNairaInput(event.target.value)); setErrors((current) => ({ ...current, amount: undefined })); reset(); }} placeholder="0.00" prefix="₦" value={amount}/>}
           <Button type="submit">Calculate Fee</Button>
         </form>
       </Card>
       <div className="grid gap-4 scroll-mt-20" ref={resultRef}>
         <Card className="overflow-hidden p-0!">
-          <div className="border-b border-border bg-surface-muted p-4"><h2 className="m-0 text-label font-bold tracking-[0.5px] text-text">PRESCRIBED MINIMUM FEE</h2><p className="mt-1 text-caption text-text-muted">Per the {ORDER_SHORT_NAME}</p></div>
+          <div className="border-b border-border bg-surface-muted p-4"><h2 className="m-0 text-label font-bold tracking-[0.5px] text-text">{agreedFee ? "AGREED FEE" : "PRESCRIBED MINIMUM FEE"}</h2><p className="mt-1 text-caption text-text-muted">{agreedFee ? "Under paragraph 2 of the" : "Per the"} {ORDER_SHORT_NAME}</p></div>
           <div className="p-4">
             {calculationError ? <div className="flex flex-col items-center gap-3 py-4 text-center"><Icon color="var(--color-accent-text)" name="info-outline" size={32}/><p className="text-body leading-[21px] text-text">{calculationError}</p></div>
               : calculation ? <FeeBreakdown calculation={calculation} offline={offline} onInvoice={() => { setShowInvoice(true); window.scrollTo({ top: 0 }); }}/>

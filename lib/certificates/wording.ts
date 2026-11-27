@@ -14,6 +14,11 @@ export type CertificateFacts = {
   propertyDescription: string | null;
   documentType: string;
   consideration: string;
+  /**
+   * Set only where the fee was agreed with the client rather than computed under Scale 4 (a Power of
+   * Attorney); the certificate then says so, so nobody reads it as a scale fee.
+   */
+  feeBasis?: string | null;
 };
 
 export type Particular = { label: string; value: string };
@@ -27,6 +32,7 @@ export function certificateParticulars(facts: CertificateFacts): Particular[] {
     ...(facts.propertyDescription ? [{ label: "DESCRIPTION OF PROPERTY", value: facts.propertyDescription }] : []),
     { label: "TYPE OF DOCUMENT", value: facts.documentType },
     { label: "CONSIDERATION", value: facts.consideration },
+    ...(facts.feeBasis ? [{ label: "BASIS OF FEE", value: facts.feeBasis }] : []),
   ];
 }
 

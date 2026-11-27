@@ -13,6 +13,8 @@ export type InvoicePdfData = {
   propertyDescription: string | null;
   documentType: string;
   amountPayable: string;
+  /** Agreed with the client under paragraph 2 of the Order, not computed under Scale 4. Optional for older callers. */
+  feeAgreed?: boolean;
   branchFee: string;
   branchName: string;
   accountName: string | null;
@@ -85,7 +87,7 @@ export async function createInvoicePdf(data: InvoicePdfData, assets: PdfAssets):
   y = row(canvas, "Document Type", data.documentType, y);
 
   // Remuneration.
-  const note = `The professional fee payable by the client, paid in full into the branch account below. The branch deducts its fee of ${data.branchFee} and remits the balance to the legal practitioner.`;
+  const note = `${data.feeAgreed ? "The professional fee agreed between the client and the legal practitioner under paragraph 2 of the Order, " : "The professional fee payable by the client, "}paid in full into the branch account below. The branch deducts its fee of ${data.branchFee} and remits the balance to the legal practitioner.`;
   const noteLines = wrap(note, fonts.sans, 8.2, A4.width - 2 * M - 30);
   const boxHeight = 58 + noteLines.length * 11;
   const boxTop = y - 16;
@@ -109,7 +111,10 @@ export async function createInvoicePdf(data: InvoicePdfData, assets: PdfAssets):
 
   y = notice(canvas, `Quote the payment reference on your transfer, and send the payment slip to your legal practitioner. They upload it in ${PRODUCT_NAME} so the branch can verify the payment and issue the Certificate of Compliance.`, y - 14);
 
-  drawWrapped(page, `Fees are computed under the ${ORDER_FULL_NAME}. The figures shown are prescribed minimums, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor's Consent. ${ATTRIBUTION}.`, { x: M, y: y - 22, width: A4.width - 2 * M, leading: 11, font: fonts.sans, size: 7.5, color: muted });
+  const basis = data.feeAgreed
+    ? `This instrument has no prescribed scale under the ${ORDER_FULL_NAME}; the fee shown was agreed with the client under paragraph 2 of the Order, having regard to complexity, time and value. It is exclusive of VAT and of disbursements such as stamp duties and registration fees.`
+    : `Fees are computed under the ${ORDER_FULL_NAME}. The figures shown are prescribed minimums, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor's Consent.`;
+  drawWrapped(page, `${basis} ${ATTRIBUTION}.`, { x: M, y: y - 22, width: A4.width - 2 * M, leading: 11, font: fonts.sans, size: 7.5, color: muted });
 
   if (data.isDemo) drawSpecimenWatermark(canvas);
   return toPdfBlob(canvas.pdf);

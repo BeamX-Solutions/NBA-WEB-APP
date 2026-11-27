@@ -1,6 +1,6 @@
 import { isUuid, databaseDocumentTypes } from "../calculator/contracts.ts";
-import { DOCUMENT_TYPES } from "../fees/legal-fees.ts";
-import { asRow, money, text } from "../transactions/contracts.ts";
+import { AGREED_FEE_BASIS, DOCUMENT_TYPES } from "../fees/legal-fees.ts";
+import { AGREED_FEE_CONSIDERATION, asRow, isAgreedFeeType, money, text } from "../transactions/contracts.ts";
 import type { Certificate, VerificationRecord } from "./types.ts";
 
 function documentLabel(value: unknown): string | null {
@@ -67,7 +67,8 @@ export function parseCertificate(value: unknown, identity: { name: string; scn: 
   const number = text(row.certificate_number);
   const issued = issueDate(row.issued_at);
   const document = documentLabel(transaction.document_type);
-  const consideration = money(transaction.consideration);
+  const agreed = isAgreedFeeType(transaction.document_type);
+  const consideration = agreed ? AGREED_FEE_CONSIDERATION : money(transaction.consideration);
   const parties = text(transaction.parties);
   const branchName = text(branch.name);
   if (!rbin || !normalizeRbin(rbin) || !number || !issued || !document || !consideration || !parties || !branchName) return null;
@@ -75,7 +76,7 @@ export function parseCertificate(value: unknown, identity: { name: string; scn: 
   return {
     id: row.id, year: issued.year, rbin, certificateNumber: number, issuedAt: issued.date, issuedOn: issued.long,
     documentType: document, practitioner: identity.name, scn: identity.scn,
-    parties, propertyDescription: text(transaction.property_description), consideration, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
+    parties, propertyDescription: text(transaction.property_description), consideration, feeBasis: agreed ? AGREED_FEE_BASIS : null, branch: branchName, chairman: text(branch.chairman_name) ?? "Unavailable",
     chairmanSignaturePath: text(branch.chairman_signature_url),
     revoked: row.revoked_at !== null, revocationReason: text(row.revocation_reason),
     isDemo: branch.is_demo === true,

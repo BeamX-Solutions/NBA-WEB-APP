@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const pdf = await createInvoicePdf({
       invoiceNumber: invoice.invoiceNumber, issuedOn: invoice.issuedOn, practitioner: invoice.practitioner, scn: invoice.scn,
-      parties: invoice.parties, propertyDescription: invoice.propertyDescription, documentType: invoice.documentType, amountPayable: invoice.amountPayable, branchFee: invoice.branchFee,
+      parties: invoice.parties, propertyDescription: invoice.propertyDescription, documentType: invoice.documentType, amountPayable: invoice.amountPayable, feeAgreed: invoice.feeAgreed, branchFee: invoice.branchFee,
       branchName: invoice.branch.name, accountName: invoice.branch.accountName, accountNumber: invoice.branch.accountNumber, bankName: invoice.branch.bankName,
       isDemo: invoice.isDemo,
     }, await loadPdfAssets());

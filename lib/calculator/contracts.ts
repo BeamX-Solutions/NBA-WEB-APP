@@ -20,7 +20,10 @@ export const databaseDocumentTypes = {
 export type DatabaseDocumentType = (typeof databaseDocumentTypes)[keyof typeof databaseDocumentTypes];
 
 export type ValidatedInvoiceInput = {
+  /** The amount the fee is assessed on, or for an agreed fee (Power of Attorney) the agreed fee itself. */
   amountKobo: bigint;
+  /** The fee was agreed with the client under paragraph 2 of the Order rather than computed under Scale 4. */
+  feeAgreed: boolean;
   databaseDocumentType: DatabaseDocumentType;
   document: DocumentType;
   parties: string;
@@ -44,8 +47,10 @@ export function validateInvoiceInput(input: {
   const propertyDescription = input.propertyDescription.trim();
 
   if (!document || !(document.id in databaseDocumentTypes)) fieldErrors.document = "Select a valid document or transaction type.";
-  else if (document.scale === "discretionary") fieldErrors.document = `${document.label} is not covered by Scale 4, so no invoice can be generated for it.`;
-  if (amountKobo === null) fieldErrors.amount = "Enter an amount above ₦0 and no more than ₦1 trillion.";
+  // A discretionary document is invoiced on the agreed fee. Whether the branch accepts these is
+  // the database's to enforce (create_transaction), not the browser's.
+  const feeAgreed = document?.scale === "discretionary";
+  if (amountKobo === null) fieldErrors.amount = feeAgreed ? "Enter the agreed fee, above ₦0 and no more than ₦1 trillion." : "Enter an amount above ₦0 and no more than ₦1 trillion.";
   if (!parties) fieldErrors.parties = "Enter the parties to the document.";
   else if (parties.length > 160) fieldErrors.parties = "Parties to the document must be 160 characters or fewer.";
   if (!propertyDescription) fieldErrors.propertyDescription = "Describe the property.";
@@ -56,6 +61,7 @@ export function validateInvoiceInput(input: {
   return {
     data: {
       amountKobo,
+      feeAgreed,
       databaseDocumentType: databaseDocumentTypes[document.id as keyof typeof databaseDocumentTypes],
       document,
       parties,
@@ -75,6 +81,12 @@ export function safeInvoiceErrorMessage(error: unknown): string {
   }
   if (message.includes("profile not found")) {
     return "Your practitioner profile is not available. Contact your branch administrator.";
+  }
+  if (message.includes("does not accept power of attorney")) {
+    return "Your branch does not accept Power of Attorney invoices. Its fee is agreed with the client under paragraph 2 of the Order.";
+  }
+  if (message.includes("agreed fee") || message.includes("fee agreed")) {
+    return "Enter the fee agreed with the client, above ₦0 and no more than ₦1 trillion.";
   }
   if (message.includes("super administrator account")) {
     return "A super administrator account cannot create invoices.";

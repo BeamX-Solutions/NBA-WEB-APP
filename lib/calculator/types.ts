@@ -1,4 +1,6 @@
 export type CalculatorBranch = {
+  /** Whether the branch lets its practitioners invoice a Power of Attorney at the agreed fee (NBA APP 20261127100000). */
+  acceptsPoaInvoices: boolean;
   accountName: string | null;
   accountNumber: string | null;
   activationStatus: string;

@@ -77,3 +77,13 @@ test("a demo invoice renders as one A4 page with its do-not-pay marks; a real on
   const real = await createInvoicePdf(invoice, assets);
   assert.ok(demo.size > real.size, "the demo invoice draws more than the real one");
 });
+
+test("a Power of Attorney at an agreed fee still fits one A4 page, invoice and certificate alike", async () => {
+  const assets = await loadPdfAssets();
+  await assertSingleA4(await createInvoicePdf({ ...invoice, documentType: "Irrevocable Power of Attorney", feeAgreed: true }, assets));
+  const poa = { ...certificate, documentType: "Irrevocable Power of Attorney", consideration: "Not applicable (agreed fee)", feeBasis: "Agreed with the client under paragraph 2 of the Order" };
+  await assertSingleA4(await createCertificatePdf(poa, assets));
+  await assertSingleA4(await createCertificatePdf({ ...poa, revoked: true, isDemo: true }, assets));
+  const { fonts } = await createCanvas(assets);
+  for (const data of [poa, { ...poa, revoked: true }, { ...poa, isDemo: true }, { ...poa, revoked: true, isDemo: true }]) assert.ok(footGap(fonts, data).gap >= 0, "body overlaps the foot");
+});

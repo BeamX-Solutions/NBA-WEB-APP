@@ -11,7 +11,7 @@ import { Icon, type IconName } from "@/components/mobile/icon";
 import { DetailList, DetailRow, ScreenHeading, SectionTitle } from "@/components/mobile/screen";
 import { Notice } from "@/components/mobile/states";
 import type { CalculatorContext, CreateInvoiceActionState } from "@/lib/calculator/types";
-import { formatNaira, type DocumentType, type FeeBreakdown } from "@/lib/fees/legal-fees";
+import { AGREED_FEE_BASIS, formatNaira, type DocumentType, type FeeBreakdown } from "@/lib/fees/legal-fees";
 import { createTermsPdf, downloadPdf, validateText } from "@/lib/preview/documents";
 import { useOnline } from "@/lib/use-online";
 
@@ -128,10 +128,10 @@ export function InvoiceFlow({ calculation, context, onBack }: { calculation: Cal
       <input name="amount" type="hidden" value={formatNaira(amountKobo, true).slice(1).replaceAll(",", "")}/>
       <input name="documentId" type="hidden" value={document.id}/>
       <Card className="mb-4">
-        <SectionTitle icon="calculate">Calculated fee</SectionTitle>
+        <SectionTitle icon="calculate">{fee.scale === "agreed" ? "Agreed fee" : "Calculated fee"}</SectionTitle>
         <DetailList>
           <DetailRow label="Document Type" value={document.label}/>
-          <DetailRow label={document.basisLabel} value={formatNaira(amountKobo)}/>
+          {fee.scale === "agreed" ? <DetailRow label="Basis of fee" value={AGREED_FEE_BASIS}/> : <DetailRow label={document.basisLabel} value={formatNaira(amountKobo)}/>}
           <DetailRow emphasise label="Client pays into branch account" value={formatNaira(fee.professionalFeeKobo)}/>
           <DetailRow label="Less 2% branch fee" value={formatNaira(fee.branchFeeKobo)}/>
           <DetailRow label="Branch sends to you" value={formatNaira(fee.netFeeKobo)}/>

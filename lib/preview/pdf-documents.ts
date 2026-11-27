@@ -132,10 +132,17 @@ export async function createTermsPdf(basis: Pick<PreviewInvoice, "document" | "a
   y = field(page, ctx, "Instructions accepted", date(new Date()), y);
   y = field(page, ctx, "Legal practitioner", practitionerName, y);
   y = field(page, ctx, "Supreme Court number", practitionerScn, y) - 22;
-  const basisName = basis.document.basisLabel.toLowerCase();
-  section("The instruction", "You have instructed me in connection with " + matter.trim() + ". The work is the preparation of a " + basis.document.label + ", assessed under " + basis.document.description.split(" - ")[0] + " of the Legal Practitioners (Remuneration) Order, 2023.");
-  section("Basis of charge", "The fee is calculated on the " + basisName + " of " + formatNaira(basis.amountKobo) + ". The relevant bands in the Order are applied to that value.");
-  section("The fee", formatNaira(basis.fee.professionalFeeKobo) + " is the prescribed minimum professional fee. The Order's figures are minimums, not fixed prices. The calculation comprises " + basis.fee.lines.map((item) => item.label + ": " + formatNaira(item.amountKobo)).join("; ") + ". VAT and disbursements are separate.");
+  if (basis.fee.scale === "agreed") {
+    // A Power of Attorney: no scale applies, so the letter records the agreement instead of a calculation.
+    section("The instruction", "You have instructed me in connection with " + matter.trim() + ". The work is the preparation of an " + basis.document.label + ". The Legal Practitioners (Remuneration) Order, 2023 prescribes no scale for this instrument.");
+    section("Basis of charge", "Under paragraph 2 of the Order, the fee has been agreed between us having regard to the complexity of the matter, the time and skill it requires, and the value of the property concerned.");
+    section("The fee", "The agreed professional fee is " + formatNaira(basis.fee.professionalFeeKobo) + ". VAT and disbursements are separate.");
+  } else {
+    const basisName = basis.document.basisLabel.toLowerCase();
+    section("The instruction", "You have instructed me in connection with " + matter.trim() + ". The work is the preparation of a " + basis.document.label + ", assessed under " + basis.document.description.split(" - ")[0] + " of the Legal Practitioners (Remuneration) Order, 2023.");
+    section("Basis of charge", "The fee is calculated on the " + basisName + " of " + formatNaira(basis.amountKobo) + ". The relevant bands in the Order are applied to that value.");
+    section("The fee", formatNaira(basis.fee.professionalFeeKobo) + " is the prescribed minimum professional fee. The Order's figures are minimums, not fixed prices. The calculation comprises " + basis.fee.lines.map((item) => item.label + ": " + formatNaira(item.amountKobo)).join("; ") + ". VAT and disbursements are separate.");
+  }
   if (basis.fee.halfRateFeeKobo !== null) section("The other party", "Where the other party's practitioner reviews the draft instrument under the applicable Scale 4 rule, the indicated half-rate is " + formatNaira(basis.fee.halfRateFeeKobo) + ". This is not payable to me and is shown only for context.");
   if (ctx.pdf.getPageCount() === 1) { page = ctx.pdf.addPage([W, H]); y = 790; }
   section("Payment through the branch", "The fee is paid into the account of " + (practitioner?.branch ?? "the branch") + " against an invoice reference. The branch keeps its fee of " + formatNaira(basis.fee.branchFeeKobo) + " (2% of the fee) and sends the balance to me. This document creates no payment reference or transaction.");

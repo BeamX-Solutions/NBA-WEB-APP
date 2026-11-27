@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { PDFDocument } from "pdf-lib";
-import { calculateLegalFee, DOCUMENT_TYPES } from "../fees/legal-fees.ts";
+import { agreedFeeBreakdown, calculateLegalFee, DOCUMENT_TYPES } from "../fees/legal-fees.ts";
 import { createCertificateLayoutPreviewPdf, createInvoicePdf, createTermsPdf, validateProof, validateText } from "./documents.ts";
 
 test("required document text stays bounded", () => {
@@ -22,6 +22,8 @@ test("invoice, terms, and certificate layout export at A4", async () => {
       await createInvoicePdf(invoice),
       await createTermsPdf(basis, "Obinna Nweke", "the sale of the property at 12 Ziks Avenue"),
       await createTermsPdf(basis, "Test Client", "Test matter", { name: "Test Practitioner", scn: "SCN/TEST", branch: "Test Branch" }),
+      // A Power of Attorney at an agreed fee: no scale, no working, the agreement recorded instead.
+      await createTermsPdf({ document: DOCUMENT_TYPES.find((item) => item.id === "irrevocable-power-of-attorney")!, amountKobo: 50_000_000n, fee: agreedFeeBreakdown(50_000_000n) }, "Test Client", "the power of attorney over Plot 14", { name: "Test Practitioner", scn: "SCN/TEST", branch: "Test Branch" }),
       await createCertificateLayoutPreviewPdf(),
     ];
     for (const output of outputs) {
@@ -33,7 +35,7 @@ test("invoice, terms, and certificate layout export at A4", async () => {
       }
     }
     assert.equal((await PDFDocument.load(await outputs[0].arrayBuffer())).getPageCount(), 1);
-    assert.equal((await PDFDocument.load(await outputs[3].arrayBuffer())).getPageCount(), 1);
+    assert.equal((await PDFDocument.load(await outputs.at(-1)!.arrayBuffer())).getPageCount(), 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
