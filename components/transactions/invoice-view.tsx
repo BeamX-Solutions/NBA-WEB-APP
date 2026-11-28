@@ -74,7 +74,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceRecord }) {
         {invoice.propertyDescription ? <DetailRow label="Description of Property" value={invoice.propertyDescription}/> : null}
         <DetailRow label="Date" value={invoice.issuedAt}/>
       </DetailList>
-      <div className="flex flex-col items-center py-4 text-center"><p className="text-caption tracking-[0.5px] text-text-muted">REMUNERATION</p><p className="mt-1 text-[34px] leading-tight font-bold text-primary">{invoice.amountPayable}</p><p className="mt-1 text-caption text-text-muted">Paid by the client into the branch account. The branch keeps {invoice.branchFee} and sends you {invoice.dueToPractitioner}.</p></div>
+      <div className="flex flex-col items-center py-4 text-center"><p className="text-caption tracking-[0.5px] text-text-muted">REMUNERATION</p><p className="mt-1 text-[34px] leading-tight font-bold text-primary">{invoice.amountPayable}</p><p className="mt-1 text-caption text-text-muted">Paid by the client into the branch account. The branch keeps {invoice.branchFee} and sends you {invoice.dueToPractitioner}.</p>{invoice.scaleNote ? <p className="mt-2 text-caption text-accent-text">{invoice.scaleNote}</p> : null}</div>
     </Card>
     <Card className="mt-4">
       <SectionTitle icon="account-balance" underline>Pay into this account</SectionTitle>

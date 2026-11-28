@@ -4,16 +4,20 @@ import type { InvoiceFieldErrors } from "./types.ts";
 export const databaseDocumentTypes = {
   "contract-of-sale": "contract_of_sale",
   "deed-of-assignment": "deed_of_assignment",
+  "deed-of-assignment-ipoa": "deed_of_assignment_ipoa",
   "deed-of-conveyance": "deed_of_conveyance",
+  "deed-of-conveyance-ipoa": "deed_of_conveyance_ipoa",
   "deed-of-exchange": "deed_of_exchange",
   "deed-of-gift": "deed_of_gift",
   "deed-of-lease": "deed_of_lease",
   "deed-of-sub-lease": "deed_of_sub_lease",
   "deed-of-surrender": "deed_of_surrender",
   "deed-of-transfer": "deed_of_transfer",
-  "irrevocable-power-of-attorney": "power_of_attorney",
+  "deed-of-transfer-ipoa": "deed_of_transfer_ipoa",
+  "irrevocable-power-of-attorney": "irrevocable_power_of_attorney",
   "mortgage-deed": "mortgage_deed",
   "mortgage-release": "deed_of_release",
+  "power-of-attorney": "power_of_attorney",
   "tenancy-agreement": "tenancy_agreement",
 } as const;
 

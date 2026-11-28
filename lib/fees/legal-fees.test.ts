@@ -112,7 +112,7 @@ test("half rate is half the scale fee, and null without a counterpart", () => {
 });
 
 test("Power of Attorney refuses to calculate and cites paragraph 2", () => {
-  assert.throws(() => calculateLegalFee(documentById("irrevocable-power-of-attorney"), 10_000_000n * NAIRA), (error) => error instanceof FeeCalculationError && /paragraph 2/.test(error.message));
+  assert.throws(() => calculateLegalFee(documentById("power-of-attorney"), 10_000_000n * NAIRA), (error) => error instanceof FeeCalculationError && /paragraph 2/.test(error.message));
 });
 
 test("the branch fee comes out of the professional fee rather than on top of it", () => {
@@ -160,4 +160,18 @@ test("a deed of transfer is priced on Scale 4A, the same as an assignment of the
     );
   }
   assert.equal(feeFor("deed-of-transfer", 60_000_000n), 5_500_000n * NAIRA);
+});
+
+test("the Irrevocable Power of Attorney and the combined documents are one Scale 4A fee each", () => {
+  for (const id of ["irrevocable-power-of-attorney", "deed-of-assignment-ipoa", "deed-of-transfer-ipoa", "deed-of-conveyance-ipoa"]) {
+    const document = documentById(id);
+    assert.equal(document.scale, "4A", id);
+    assert.match(document.note ?? "", /some States only/, id);
+    for (const naira of [1_000_000n, 50_000_000n, 60_000_000n, 150_000_000n]) {
+      assert.equal(feeFor(id, naira), feeFor("deed-of-assignment", naira), `${id} at ₦${naira}`);
+    }
+  }
+  assert.equal(feeFor("deed-of-assignment-ipoa", 60_000_000n), 5_500_000n * NAIRA);
+  assert.equal(documentById("deed-of-assignment").note, undefined);
+  assert.equal(documentById("power-of-attorney").scale, "discretionary");
 });

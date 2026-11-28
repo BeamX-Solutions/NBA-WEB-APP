@@ -16,12 +16,24 @@ export type DocumentType = {
   basisLabel: string;
   fullRateParty: string;
   halfRateParty: string | null;
+  /** Shown wherever the document's scale is, when the scale applies only in some States. */
+  note?: string;
 };
+
+/**
+ * The barrister's wording (sample A, 28 November 2026) for the Irrevocable Power of Attorney, which
+ * the Order does not scale but some States prepare and charge as an instrument of transfer.
+ */
+export const IPOA_NOTE = "Scale 4A, where prepared as an instrument of transfer. Applicable in some States only; elsewhere the Irrevocable Power of Attorney is not scalable.";
 
 export const DOCUMENT_TYPES: readonly DocumentType[] = [
   { id: "deed-of-assignment", label: "Deed of Assignment", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Assignee's practitioner", halfRateParty: "Assignor's practitioner" },
+  // Combined documents (28 November 2026): one document, one 4A fee, beside the plain deed.
+  { id: "deed-of-assignment-ipoa", label: "Deed of Assignment/Irrevocable Power of Attorney", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Assignee's practitioner", halfRateParty: "Assignor's practitioner", note: IPOA_NOTE },
   { id: "deed-of-transfer", label: "Deed of Transfer", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Transferee's practitioner", halfRateParty: "Transferor's practitioner" },
+  { id: "deed-of-transfer-ipoa", label: "Deed of Transfer/Irrevocable Power of Attorney", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Transferee's practitioner", halfRateParty: "Transferor's practitioner", note: IPOA_NOTE },
   { id: "deed-of-conveyance", label: "Deed of Conveyance", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner" },
+  { id: "deed-of-conveyance-ipoa", label: "Deed of Conveyance/Irrevocable Power of Attorney", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner", note: IPOA_NOTE },
   { id: "deed-of-gift", label: "Deed of Gift", scale: "4A", description: "Scale 4A - Market value of the property.", basisLabel: "Market value of the property", fullRateParty: "Donee's practitioner", halfRateParty: "Donor's practitioner" },
   { id: "contract-of-sale", label: "Contract of Sale", scale: "4A", description: "Scale 4A - Purchase price.", basisLabel: "Purchase price", fullRateParty: "Purchaser's practitioner", halfRateParty: "Vendor's practitioner" },
   { id: "deed-of-surrender", label: "Deed of Surrender", scale: "4A", description: "Scale 4A - Value of the unexpired lease interest.", basisLabel: "Value of the unexpired lease interest", fullRateParty: "Practitioner assessing the surrendered interest", halfRateParty: null },
@@ -31,7 +43,9 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = [
   { id: "tenancy-agreement", label: "Tenancy Agreement", scale: "4C", description: "Scale 4C - Annual rental value.", basisLabel: "Annual rental value", fullRateParty: "Landlord's practitioner", halfRateParty: "Tenant's practitioner" },
   { id: "deed-of-lease", label: "Deed of Lease", scale: "4C", description: "Scale 4C - Annual rental value.", basisLabel: "Annual rental value", fullRateParty: "Lessor's practitioner", halfRateParty: "Lessee's practitioner" },
   { id: "deed-of-sub-lease", label: "Deed of Sub-Lease", scale: "4C", description: "Scale 4C - Annual rental value.", basisLabel: "Annual rental value", fullRateParty: "Sub-Lessor's practitioner", halfRateParty: "Sub-Lessee's practitioner" },
-  { id: "irrevocable-power-of-attorney", label: "Irrevocable Power of Attorney", scale: "discretionary", description: "Not covered by Scale 4. The fee is agreed with the client.", basisLabel: "Not applicable", fullRateParty: "Agreed with the client", halfRateParty: null },
+  { id: "irrevocable-power-of-attorney", label: "Irrevocable Power of Attorney", scale: "4A", description: "Scale 4A - Consideration / purchase price.", basisLabel: "Consideration / purchase price", fullRateParty: "Donee's practitioner", halfRateParty: "Donor's practitioner", note: IPOA_NOTE },
+  // The ordinary Power of Attorney stays outside the scale, as the Irrevocable one was until 28 November 2026.
+  { id: "power-of-attorney", label: "Power of Attorney", scale: "discretionary", description: "Not covered by Scale 4. The fee is agreed with the client.", basisLabel: "Not applicable", fullRateParty: "Agreed with the client", halfRateParty: null },
 ] as const;
 
 export const MAX_AMOUNT_KOBO = 1_000_000_000_000_00n;

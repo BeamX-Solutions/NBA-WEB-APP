@@ -9,7 +9,11 @@ test("every calculator document maps to a deployed database enum value", () => {
     Object.keys(databaseDocumentTypes).sort(),
   );
   assert.equal(databaseDocumentTypes["mortgage-release"], "deed_of_release");
-  assert.equal(databaseDocumentTypes["irrevocable-power-of-attorney"], "power_of_attorney");
+  assert.equal(databaseDocumentTypes["irrevocable-power-of-attorney"], "irrevocable_power_of_attorney");
+  assert.equal(databaseDocumentTypes["power-of-attorney"], "power_of_attorney");
+  assert.equal(databaseDocumentTypes["deed-of-assignment-ipoa"], "deed_of_assignment_ipoa");
+  assert.equal(databaseDocumentTypes["deed-of-transfer-ipoa"], "deed_of_transfer_ipoa");
+  assert.equal(databaseDocumentTypes["deed-of-conveyance-ipoa"], "deed_of_conveyance_ipoa");
 });
 
 test("invoice validation returns normalized trusted inputs", () => {
@@ -36,7 +40,7 @@ test("invoice validation requires a description of the property of at most 500 c
 test("invoice validation rejects invalid fields and a discretionary Power of Attorney", () => {
   const result = validateInvoiceInput({
     amount: "0",
-    documentId: "irrevocable-power-of-attorney",
+    documentId: "power-of-attorney",
     parties: "",
     propertyDescription: "",
   });
@@ -67,4 +71,12 @@ test("a deed of transfer validates and maps to deed_of_transfer", () => {
   assert.deepEqual(result.fieldErrors, {});
   assert.equal(result.data?.databaseDocumentType, "deed_of_transfer");
   assert.equal(result.data?.document.label, "Deed of Transfer");
+});
+
+test("an Irrevocable Power of Attorney and the combined documents validate for an invoice", () => {
+  for (const [documentId, type] of [["irrevocable-power-of-attorney", "irrevocable_power_of_attorney"], ["deed-of-assignment-ipoa", "deed_of_assignment_ipoa"], ["deed-of-transfer-ipoa", "deed_of_transfer_ipoa"], ["deed-of-conveyance-ipoa", "deed_of_conveyance_ipoa"]] as const) {
+    const result = validateInvoiceInput({ amount: "60,000,000", documentId, parties: "Donor to Donee", propertyDescription: "Plot 9, Awka" });
+    assert.deepEqual(result.fieldErrors, {}, documentId);
+    assert.equal(result.data?.databaseDocumentType, type);
+  }
 });

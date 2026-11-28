@@ -1,5 +1,5 @@
 import { isUuid } from "../calculator/contracts.ts";
-import { asRow, documentTypeLabel, formatLagosDate, money, text } from "./contracts.ts";
+import { asRow, documentTypeLabel, formatLagosDate, money, scaleNoteFor, text } from "./contracts.ts";
 
 /** The client's bill for one transaction, with the account of the branch it was drawn on. */
 export type InvoiceRecord = {
@@ -13,6 +13,8 @@ export type InvoiceRecord = {
   /** Null on invoices drawn before the field existed. */
   propertyDescription: string | null;
   amountPayable: string;
+  /** Where the scale applies only in some States (the Irrevocable Power of Attorney family), it says so. */
+  scaleNote: string | null;
   branchFee: string;
   dueToPractitioner: string;
   practitioner: string;
@@ -43,7 +45,7 @@ export function parseInvoice(value: unknown, identity: { name: string; scn: stri
   const bankName = text(branch.bank_name);
   const complete = Boolean(accountName && accountNumber && bankName);
   return {
-    id: row.id, invoiceNumber, issuedAt, issuedOn, documentType, parties, propertyDescription: text(row.property_description), amountPayable, branchFee, dueToPractitioner,
+    id: row.id, invoiceNumber, issuedAt, issuedOn, documentType, parties, propertyDescription: text(row.property_description), amountPayable, scaleNote: scaleNoteFor(row.document_type), branchFee, dueToPractitioner,
     canSubmitProof: row.status === "awaiting_payment" || row.status === "rejected",
     practitioner: identity.name, scn: identity.scn,
     // Partial details are treated as none: an incomplete account is one nobody can pay into.
