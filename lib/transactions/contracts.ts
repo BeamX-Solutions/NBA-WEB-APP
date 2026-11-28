@@ -61,6 +61,11 @@ export function formatLagosDate(value: unknown, style: "short" | "long" = "short
   return new Intl.DateTimeFormat("en-GB", options).format(date);
 }
 
+/** The State-specific note for a stored document type (the Irrevocable Power of Attorney family), or null. */
+export function scaleNoteFor(value: unknown): string | null {
+  return DOCUMENT_TYPES.find(item => databaseDocumentTypes[item.id as keyof typeof databaseDocumentTypes] === value)?.note ?? null;
+}
+
 export function documentTypeLabel(value: unknown): string | null {
   return DOCUMENT_TYPES.find(item => databaseDocumentTypes[item.id as keyof typeof databaseDocumentTypes] === value)?.label ?? null;
 }

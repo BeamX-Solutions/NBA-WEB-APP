@@ -13,6 +13,8 @@ export type InvoicePdfData = {
   propertyDescription: string | null;
   documentType: string;
   amountPayable: string;
+  /** Printed before the footer where the scale applies only in some States. Optional for older callers. */
+  scaleNote?: string | null;
   branchFee: string;
   branchName: string;
   accountName: string | null;
@@ -109,7 +111,7 @@ export async function createInvoicePdf(data: InvoicePdfData, assets: PdfAssets):
 
   y = notice(canvas, `Quote the payment reference on your transfer, and send the payment slip to your legal practitioner. They upload it in ${PRODUCT_NAME} so the branch can verify the payment and issue the Certificate of Compliance.`, y - 14);
 
-  drawWrapped(page, `Fees are computed under the ${ORDER_FULL_NAME}. The figures shown are prescribed minimums, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor's Consent. ${ATTRIBUTION}.`, { x: M, y: y - 22, width: A4.width - 2 * M, leading: 11, font: fonts.sans, size: 7.5, color: muted });
+  drawWrapped(page, `${data.scaleNote ? data.scaleNote + " " : ""}Fees are computed under the ${ORDER_FULL_NAME}. The figures shown are prescribed minimums, exclusive of VAT and of disbursements such as stamp duties, registration fees and Governor's Consent. ${ATTRIBUTION}.`, { x: M, y: y - 22, width: A4.width - 2 * M, leading: 11, font: fonts.sans, size: 7.5, color: muted });
 
   if (data.isDemo) drawSpecimenWatermark(canvas);
   return toPdfBlob(canvas.pdf);

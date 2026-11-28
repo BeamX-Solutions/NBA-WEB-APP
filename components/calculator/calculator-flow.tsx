@@ -39,6 +39,7 @@ function FeeBreakdown({ calculation, offline, onInvoice }: { calculation: Calcul
     <p className="text-caption text-text-muted">{document.fullRateParty}</p>
     <strong className="block font-heading text-display leading-tight font-bold text-primary [font-variant-numeric:lining-nums]">{formatNaira(fee.professionalFeeKobo)}</strong>
     <p className="mt-1 text-caption text-text-muted">Scale {fee.scale} - {document.label}</p>
+    {document.note ? <p className="mt-2 rounded-input bg-accent-surface px-3 py-2 text-caption leading-[17px] text-accent-text">{document.note}</p> : null}
     <div className="my-3 h-px bg-border"/>
     {fee.lines.map((line) => <Row key={line.label} label={line.label} labelClass="text-label text-text-muted" value={formatNaira(line.amountKobo)} valueClass="text-label font-medium text-text"/>)}
     <div className="my-3 h-px bg-border"/>
@@ -102,7 +103,7 @@ export function CalculatorFlow({ context, offline = false }: { context: Calculat
       <Card>
         <SectionTitle icon="description">Transaction Details</SectionTitle>
         <form noValidate onSubmit={(event) => { event.preventDefault(); calculate(); }}>
-          <SelectField error={errors.documentType} hint={document ? `Scale ${document.scale} - ${document.basisLabel}.` : undefined} id="calculator-document" label="Document / Transaction Type" onChange={(value) => { setDocumentId(value); setErrors((current) => ({ ...current, documentType: undefined })); reset(); }} options={documentOptions} placeholder="Select Document Type" value={documentId}/>
+          <SelectField error={errors.documentType} hint={document ? (document.scale === "discretionary" ? "No prescribed scale: the fee is agreed with the client." : document.note ?? `Scale ${document.scale} - ${document.basisLabel}.`) : undefined} id="calculator-document" label="Document / Transaction Type" onChange={(value) => { setDocumentId(value); setErrors((current) => ({ ...current, documentType: undefined })); reset(); }} options={documentOptions} placeholder="Select Document Type" value={documentId}/>
           {discretionary ? null : <TextField error={errors.amount} hint={document?.scale === "4C" ? "Enter one year of rent, not the total over the term." : undefined} id="calculator-amount" inputMode="decimal" label={`${document?.basisLabel ?? "Amount"} (₦)`} onChange={(event) => { setAmount(groupNairaInput(event.target.value)); setErrors((current) => ({ ...current, amount: undefined })); reset(); }} placeholder="0.00" prefix="₦" value={amount}/>}
           <Button type="submit">Calculate Fee</Button>
         </form>

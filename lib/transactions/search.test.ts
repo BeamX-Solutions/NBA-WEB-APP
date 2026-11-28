@@ -44,7 +44,9 @@ test("search terms cannot change the shape of the filter", () => {
 });
 
 test("a document type is found by the label people see", () => {
-  assert.deepEqual(documentTypesMatching("assignment"), ["deed_of_assignment"]);
+  // The combined Deed of Assignment/Irrevocable Power of Attorney is an assignment too.
+  assert.deepEqual(documentTypesMatching("assignment").sort(), ["deed_of_assignment", "deed_of_assignment_ipoa"].sort());
+  assert.deepEqual(documentTypesMatching("irrevocable").sort(), ["deed_of_assignment_ipoa", "deed_of_conveyance_ipoa", "deed_of_transfer_ipoa", "irrevocable_power_of_attorney"].sort());
   assert.deepEqual(documentTypesMatching("mortgage").sort(), ["deed_of_release", "mortgage_deed"].sort());
   assert.deepEqual(documentTypesMatching(""), []);
   assert.equal(searchFilter("gift"), "invoice_number.ilike.*gift*,parties.ilike.*gift*,document_type.in.(deed_of_gift)");

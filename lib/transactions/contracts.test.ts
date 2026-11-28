@@ -23,7 +23,9 @@ test("live records carry the client-pays-through-branch split and use owned iden
   assert.equal(parseTransaction({ ...row, document_type: "unknown" }, identity), null);
   assert.equal(parseTransaction({ ...row, status: "unknown" }, identity), null);
   assert.equal(parseTransaction({ ...row, status: "constructor" }, identity), null);
-  assert.equal(parseTransaction({ ...row, document_type: "power_of_attorney" }, identity)?.documentType, "Irrevocable Power of Attorney");
+  assert.equal(parseTransaction({ ...row, document_type: "power_of_attorney" }, identity)?.documentType, "Power of Attorney");
+  assert.equal(parseTransaction({ ...row, document_type: "irrevocable_power_of_attorney" }, identity)?.documentType, "Irrevocable Power of Attorney");
+  assert.equal(parseTransaction({ ...row, document_type: "deed_of_conveyance_ipoa" }, identity)?.documentType, "Deed of Conveyance/Irrevocable Power of Attorney");
 });
 
 test("a recorded remittance is shown only when complete", () => {

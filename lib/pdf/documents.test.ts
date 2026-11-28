@@ -77,3 +77,12 @@ test("a demo invoice renders as one A4 page with its do-not-pay marks; a real on
   const real = await createInvoicePdf(invoice, assets);
   assert.ok(demo.size > real.size, "the demo invoice draws more than the real one");
 });
+
+test("a combined Irrevocable Power of Attorney invoice, with its State note, still fits one A4 page", async () => {
+  const assets = await loadPdfAssets();
+  await assertSingleA4(await createInvoicePdf({
+    ...invoice,
+    documentType: "Deed of Conveyance/Irrevocable Power of Attorney",
+    scaleNote: "Scale 4A, where prepared as an instrument of transfer. Applicable in some States only; elsewhere the Irrevocable Power of Attorney is not scalable.",
+  }, assets));
+});
